@@ -94,3 +94,10 @@ O design system do Onda do Bem está definido em `src/constants/theme.ts`:
 ## 📋 Licença
 
 Este projeto está sob a licença MIT.
+
+
+Developers:
+
+Wallace Coimbra
+Mateus Sepulvida
+Javier Penalver

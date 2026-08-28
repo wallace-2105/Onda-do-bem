@@ -98,6 +98,6 @@ Este projeto está sob a licença MIT.
 
 Developers:
 
-Wallace Coimbra
-Mateus Sepulvida
-Javier Penalver
+- Wallace Coimbra
+- Mateus Sepulvida
+- Javier Penalver

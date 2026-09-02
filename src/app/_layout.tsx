@@ -12,7 +12,8 @@
 
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
-import { DarkTheme, DefaultTheme, ThemeProvider, Slot } from 'expo-router';
+import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
+import { Slot } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 

@@ -27,7 +27,7 @@ export default function NotFoundScreen() {
         <AppText variant="bodySm" color="secondary" center style={styles.message}>
           A tela que você procura não existe.
         </AppText>
-        <Link href="/" style={[styles.link, { color: theme.primary }]}>
+        <Link href="/index" style={[styles.link, { color: theme.primary }]}>
           Voltar ao início
         </Link>
       </View>

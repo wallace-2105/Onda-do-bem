@@ -89,7 +89,7 @@ export default function CreatePostScreen() {
     // Limpa campos e volta para o feed
     setTitle('');
     setDescription('');
-    router.replace('/index');
+    router.replace('/(tabs)');
   };
 
   return (

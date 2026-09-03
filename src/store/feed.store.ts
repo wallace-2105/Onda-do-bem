@@ -2,11 +2,11 @@
  * Onda do Bem — Feed Store (Zustand)
  *
  * Gerencia os posts do feed em memória durante a sessão.
- * Permite alternar curtidas e adicionar novas publicações dinamicamente.
+ * Permite alternar curtidas, adicionar novas publicações e novos comentários.
  */
 
 import { create } from 'zustand';
-import { type Post, PostCategory } from '@/types/entities';
+import { type Post, type Comment, PostCategory } from '@/types/entities';
 import { INITIAL_POSTS, CURRENT_USER } from '@/constants/mock-data';
 
 interface CreatePostInput {
@@ -24,11 +24,12 @@ interface FeedState {
   selectedCategory: PostCategory | 'ALL';
   toggleLike: (postId: string) => void;
   addPost: (input: CreatePostInput) => void;
+  addComment: (postId: string, content: string) => void;
   refreshFeed: () => Promise<void>;
   setSelectedCategory: (category: PostCategory | 'ALL') => void;
 }
 
-export const useFeedStore = create<FeedState>((set, get) => ({
+export const useFeedStore = create<FeedState>((set) => ({
   posts: INITIAL_POSTS,
   isRefreshing: false,
   selectedCategory: 'ALL',
@@ -67,12 +68,42 @@ export const useFeedStore = create<FeedState>((set, get) => ({
       commentsCount: 0,
       impactScore: input.impactScore || 10,
       isLiked: true,
+      comments: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
     set((state) => ({
       posts: [newPost, ...state.posts],
+    }));
+  },
+
+  addComment: (postId: string, content: string) => {
+    if (!content.trim()) return;
+
+    const newComment: Comment = {
+      id: `c-${Date.now()}`,
+      postId,
+      authorId: CURRENT_USER.id,
+      author: CURRENT_USER,
+      parentId: null,
+      content: content.trim(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    set((state) => ({
+      posts: state.posts.map((post) => {
+        if (post.id === postId) {
+          const currentComments = post.comments || [];
+          return {
+            ...post,
+            commentsCount: post.commentsCount + 1,
+            comments: [...currentComments, newComment],
+          };
+        }
+        return post;
+      }),
     }));
   },
 

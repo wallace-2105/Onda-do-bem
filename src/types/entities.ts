@@ -80,6 +80,7 @@ export interface Post {
   commentsCount: number;
   impactScore: number;
   isLiked: boolean;
+  comments?: Comment[];
   createdAt: string;
   updatedAt: string;
 }

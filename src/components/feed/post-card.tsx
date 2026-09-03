@@ -2,7 +2,8 @@
  * Onda do Bem — PostCard Component
  *
  * Exibe uma publicação de ação positiva com cabeçalho de autor,
- * badge de categoria, imagem, métrica de impacto e ações (curtir, comentar).
+ * badge de categoria, imagem, métrica de impacto, curtidas
+ * e seção interativa de comentários com mensagens de incentivo.
  */
 
 import React, { useState } from 'react';
@@ -11,14 +12,16 @@ import {
   StyleSheet,
   Pressable,
   Share,
+  TextInput,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 
-import { type Post } from '@/types/entities';
+import { type Post, type Comment } from '@/types/entities';
 import { Avatar } from '@/components/ui/avatar';
 import { AppText } from '@/components/ui/text';
 import { useAppTheme } from '@/hooks/use-theme';
+import { useFeedStore } from '@/store/feed.store';
 import { Spacing, BorderRadius, Shadows, FontWeight } from '@/constants/theme';
 import { CATEGORY_INFO } from '@/constants/mock-data';
 
@@ -29,7 +32,10 @@ interface PostCardProps {
 
 export function PostCard({ post, onToggleLike }: PostCardProps) {
   const theme = useAppTheme();
+  const addComment = useFeedStore((s) => s.addComment);
   const [commentOpen, setCommentOpen] = useState(false);
+  const [newCommentText, setNewCommentText] = useState('');
+
   const categoryMeta = CATEGORY_INFO[post.category] ?? {
     label: 'Ação do Bem',
     emoji: '✨',
@@ -46,11 +52,20 @@ export function PostCard({ post, onToggleLike }: PostCardProps) {
     }
   };
 
-  // Formatação simples de data
+  const handleSendComment = () => {
+    if (!newCommentText.trim()) return;
+    addComment(post.id, newCommentText);
+    setNewCommentText('');
+    setCommentOpen(true);
+  };
+
+  // Formatação de data
   const dateFormatted = new Date(post.createdAt).toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: 'short',
   });
+
+  const commentsList = post.comments || [];
 
   return (
     <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -98,7 +113,7 @@ export function PostCard({ post, onToggleLike }: PostCardProps) {
         </AppText>
       </View>
 
-      {/* Imagem do Post (se houver) */}
+      {/* Imagem do Post */}
       {post.imageUrl ? (
         <View style={styles.imageContainer}>
           <Image
@@ -148,11 +163,18 @@ export function PostCard({ post, onToggleLike }: PostCardProps) {
             style={({ pressed }) => [styles.actionButton, pressed && styles.actionPressed]}
             hitSlop={8}
           >
-            <Ionicons name="chatbubble-outline" size={22} color={theme.textSecondary} />
+            <Ionicons
+              name={commentOpen ? 'chatbubble' : 'chatbubble-outline'}
+              size={22}
+              color={commentOpen ? theme.primary : theme.textSecondary}
+            />
             <AppText
               variant="bodySm"
               weight="medium"
-              style={{ color: theme.textSecondary, marginLeft: Spacing.xs }}
+              style={{
+                color: commentOpen ? theme.primary : theme.textSecondary,
+                marginLeft: Spacing.xs,
+              }}
             >
               {post.commentsCount}
             </AppText>
@@ -168,12 +190,83 @@ export function PostCard({ post, onToggleLike }: PostCardProps) {
         </Pressable>
       </View>
 
-      {/* Caixa de comentário expandida rápida */}
-      {commentOpen && (
-        <View style={[styles.commentPreview, { backgroundColor: theme.surfaceElevated }]}>
-          <AppText variant="caption" color="muted">
-            💬 Comentários em breve! Por enquanto, você já pode curtir e criar posts.
+      {/* Botão rápido para ver comentários quando fechado */}
+      {!commentOpen && commentsList.length > 0 && (
+        <Pressable
+          onPress={() => setCommentOpen(true)}
+          style={styles.openCommentsBtn}
+        >
+          <AppText variant="caption" color="secondary">
+            Ver todos os {commentsList.length} comentários de apoio ✨
           </AppText>
+        </Pressable>
+      )}
+
+      {/* Seção expandida de Comentários */}
+      {commentOpen && (
+        <View style={[styles.commentsSection, { backgroundColor: theme.surfaceElevated, borderTopColor: theme.borderLight }]}>
+          <View style={styles.commentsHeader}>
+            <View style={styles.commentsTitleRow}>
+              <Ionicons name="chatbubbles" size={16} color={theme.primary} />
+              <AppText variant="caption" weight="bold" style={{ color: theme.primary, marginLeft: 6 }}>
+                MENSAGENS DE INCENTIVO ({commentsList.length})
+              </AppText>
+            </View>
+            <Pressable onPress={() => setCommentOpen(false)} hitSlop={8}>
+              <Ionicons name="close" size={18} color={theme.textMuted} />
+            </Pressable>
+          </View>
+
+          {/* Lista de Comentários Positivos */}
+          {commentsList.map((c: Comment) => (
+            <View key={c.id} style={[styles.commentItem, { borderBottomColor: theme.borderLight }]}>
+              <Avatar
+                source={c.author.avatarUrl}
+                name={c.author.displayName}
+                size="sm"
+              />
+              <View style={styles.commentContent}>
+                <View style={styles.commentAuthorRow}>
+                  <AppText variant="caption" weight="bold">
+                    {c.author.displayName}
+                  </AppText>
+                  <AppText variant="caption" color="muted" style={{ fontSize: 10, marginLeft: 6 }}>
+                    {c.createdAt
+                      ? new Date(c.createdAt).toLocaleDateString('pt-BR', {
+                          day: '2-digit',
+                          month: 'short',
+                        })
+                      : 'Agora'}
+                  </AppText>
+                </View>
+                <AppText variant="bodySm" color="secondary" style={styles.commentText}>
+                  {c.content}
+                </AppText>
+              </View>
+            </View>
+          ))}
+
+          {/* Input para enviar nova mensagem positiva */}
+          <View style={[styles.inputRow, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <TextInput
+              placeholder="Deixe uma mensagem de apoio..."
+              placeholderTextColor={theme.textMuted}
+              value={newCommentText}
+              onChangeText={setNewCommentText}
+              style={[styles.input, { color: theme.text }]}
+              onSubmitEditing={handleSendComment}
+            />
+            <Pressable
+              onPress={handleSendComment}
+              disabled={!newCommentText.trim()}
+              style={[
+                styles.sendBtn,
+                { backgroundColor: newCommentText.trim() ? theme.primary : theme.border },
+              ]}
+            >
+              <Ionicons name="send" size={15} color="#FFFFFF" />
+            </Pressable>
+          </View>
         </View>
       )}
     </View>
@@ -273,10 +366,63 @@ const styles = StyleSheet.create({
   actionPressed: {
     opacity: 0.6,
   },
-  commentPreview: {
-    padding: Spacing.sm,
-    marginHorizontal: Spacing.md,
+  openCommentsBtn: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.sm,
+  },
+  commentsSection: {
+    padding: Spacing.md,
+    borderTopWidth: 1,
+  },
+  commentsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: Spacing.sm,
-    borderRadius: BorderRadius.sm,
+  },
+  commentsTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  commentItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: Spacing.xs,
+    marginBottom: 6,
+  },
+  commentContent: {
+    marginLeft: Spacing.sm,
+    flex: 1,
+  },
+  commentAuthorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  commentText: {
+    lineHeight: 18,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.sm + 2,
+    paddingVertical: 4,
+    marginTop: Spacing.sm,
+  },
+  input: {
+    flex: 1,
+    fontSize: 13,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  sendBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
   },
 });

@@ -233,9 +233,9 @@ export function PostCard({ post, onToggleLike }: PostCardProps) {
                   <AppText variant="caption" color="muted" style={{ fontSize: 10, marginLeft: 6 }}>
                     {c.createdAt
                       ? new Date(c.createdAt).toLocaleDateString('pt-BR', {
-                          day: '2-digit',
-                          month: 'short',
-                        })
+                        day: '2-digit',
+                        month: 'short',
+                      })
                       : 'Agora'}
                   </AppText>
                 </View>

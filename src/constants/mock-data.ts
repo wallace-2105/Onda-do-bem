@@ -256,7 +256,7 @@ export const INITIAL_POSTS: Post[] = [
     description:
       'Nossa equipe acordou às 6h da manhã e com a ajuda de banhistas e voluntários locais recolhemos 180kg de lixo plástico, canudos e redes antigas da areia. Cada pedaço retirado é uma vida marinha preservada! 🌊🐢🏖️',
     category: PostCategory.BEACH_CLEANUP,
-    imageUrl: 'https://images.unsplash.com/photo-1520116468418-095147820be1?w=800&auto=format&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1595278069441-2cf29f8005a4?w=800&auto=format&fit=crop',
     latitude: -22.9711,
     longitude: -43.1822,
     locationName: 'Praia de Copacabana, Rio de Janeiro - RJ',
@@ -1004,7 +1004,7 @@ export const INITIAL_POSTS: Post[] = [
     description:
       'Colhemos alface, tomate, cenoura e ervas frescas cultivadas sem agrotóxicos. Distribuímos mais de 60 cestas agroecológicas para famílias do bairro. Comida de verdade ao alcance de todos! 🥬🥕🍅',
     category: PostCategory.COMMUNITY_GARDEN,
-    imageUrl: 'https://images.unsplash.com/photo-1592417817098-8f3d6910985b?w=800&auto=format&fit=crop',
+    imageUrl: 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?w=800&auto=format&fit=crop',
     latitude: -23.5505,
     longitude: -46.6333,
     locationName: 'Vila Mariana, São Paulo - SP',

@@ -2,6 +2,7 @@
  * Onda do Bem — Create Post Screen
  *
  * Formulário interativo para publicar uma nova ação positiva na rede.
+ * Suporta tirar foto com a câmera, escolher da galeria ou usar imagens de exemplo.
  * Atualiza o feed em tempo real com os dados digitados.
  */
 
@@ -13,11 +14,13 @@ import {
   TextInput,
   Pressable,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 
 import { useAppTheme } from '@/hooks/use-theme';
 import { useFeedStore } from '@/store/feed.store';
@@ -62,7 +65,74 @@ export default function CreatePostScreen() {
   const [locationName, setLocationName] = useState('');
   const [impactScore, setImpactScore] = useState('25');
   const [selectedPhoto, setSelectedPhoto] = useState(SAMPLE_PHOTO_PRESETS[1].url);
+  const [isCustomPhoto, setIsCustomPhoto] = useState(false);
+  const [photoPicking, setPhotoPicking] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const handleTakePhoto = async () => {
+    try {
+      setPhotoPicking(true);
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permissão Necessária',
+          'Para tirar fotos da sua ação ecológica, precisamos de acesso à câmera do seu dispositivo.'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.85,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setSelectedPhoto(result.assets[0].uri);
+        setIsCustomPhoto(true);
+      }
+    } catch {
+      Alert.alert('Erro', 'Não foi possível abrir a câmera no momento.');
+    } finally {
+      setPhotoPicking(false);
+    }
+  };
+
+  const handlePickFromGallery = async () => {
+    try {
+      setPhotoPicking(true);
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permissão Necessária',
+          'Para escolher fotos da sua ação, precisamos de acesso à sua galeria de imagens.'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.85,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setSelectedPhoto(result.assets[0].uri);
+        setIsCustomPhoto(true);
+      }
+    } catch {
+      Alert.alert('Erro', 'Não foi possível acessar a galeria no momento.');
+    } finally {
+      setPhotoPicking(false);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setSelectedPhoto(SAMPLE_PHOTO_PRESETS[1].url);
+    setIsCustomPhoto(false);
+  };
 
   const handleSubmit = () => {
     if (!title.trim()) {
@@ -89,6 +159,8 @@ export default function CreatePostScreen() {
     // Limpa campos e volta para o feed
     setTitle('');
     setDescription('');
+    setSelectedPhoto(SAMPLE_PHOTO_PRESETS[1].url);
+    setIsCustomPhoto(false);
     router.replace('/(tabs)');
   };
 
@@ -230,11 +302,53 @@ export default function CreatePostScreen() {
           </View>
         </View>
 
-        {/* Escolha da Foto Ilustrativa (Mock) */}
+        {/* Foto da Ação com Câmera e Galeria */}
         <View style={styles.formGroup}>
           <AppText variant="label" weight="semibold" style={styles.label}>
-            Foto da Ação (Selecione uma imagem de exemplo)
+            Foto da Ação
           </AppText>
+
+          {/* Botões de Câmera e Galeria */}
+          <View style={styles.photoActionsRow}>
+            <Pressable
+              onPress={handleTakePhoto}
+              disabled={photoPicking}
+              style={[
+                styles.photoActionButton,
+                {
+                  backgroundColor: theme.surfaceElevated,
+                  borderColor: theme.border,
+                },
+              ]}
+            >
+              {photoPicking ? (
+                <ActivityIndicator size="small" color={theme.primary} />
+              ) : (
+                <Ionicons name="camera" size={20} color={theme.primary} />
+              )}
+              <AppText variant="bodySm" weight="medium" style={{ color: theme.text, marginLeft: 8 }}>
+                Tirar Foto
+              </AppText>
+            </Pressable>
+
+            <Pressable
+              onPress={handlePickFromGallery}
+              disabled={photoPicking}
+              style={[
+                styles.photoActionButton,
+                {
+                  backgroundColor: theme.surfaceElevated,
+                  borderColor: theme.border,
+                },
+              ]}
+            >
+              <Ionicons name="images" size={20} color={theme.textSecondary} />
+              <AppText variant="bodySm" weight="medium" style={{ color: theme.text, marginLeft: 8 }}>
+                Galeria
+              </AppText>
+            </Pressable>
+          </View>
+
           <View style={styles.photoPreviewContainer}>
             <Image
               source={{ uri: selectedPhoto }}
@@ -242,13 +356,17 @@ export default function CreatePostScreen() {
               contentFit="cover"
             />
           </View>
+
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetsRow}>
             {SAMPLE_PHOTO_PRESETS.map((preset) => {
-              const isSelected = selectedPhoto === preset.url;
+              const isSelected = !isCustomPhoto && selectedPhoto === preset.url;
               return (
                 <Pressable
                   key={preset.label}
-                  onPress={() => setSelectedPhoto(preset.url)}
+                  onPress={() => {
+                    setSelectedPhoto(preset.url);
+                    setIsCustomPhoto(false);
+                  }}
                   style={[
                     styles.presetButton,
                     {
@@ -331,6 +449,20 @@ const styles = StyleSheet.create({
   rowInputs: {
     flexDirection: 'row',
     gap: Spacing.sm,
+  },
+  photoActionsRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  photoActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
   },
   photoPreviewContainer: {
     width: '100%',

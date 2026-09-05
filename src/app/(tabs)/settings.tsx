@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAppTheme } from '@/hooks/use-theme';
 import { useThemeStore, type ThemeMode } from '@/store/theme.store';
+import { useFeedStore } from '@/store/feed.store';
 import { AppText } from '@/components/ui/text';
 import { Spacing, BorderRadius, FontWeight } from '@/constants/theme';
 import { Config } from '@/constants/config';
@@ -28,6 +29,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
+  const resetToDefaults = useFeedStore((s) => s.resetToDefaults);
 
   const [pushLikes, setPushLikes] = useState(true);
   const [pushMutiroes, setPushMutiroes] = useState(true);
@@ -38,6 +40,24 @@ export default function SettingsScreen() {
     { id: 'dark', label: 'Escuro', icon: 'moon-outline' },
     { id: 'system', label: 'Sistema', icon: 'phone-portrait-outline' },
   ];
+
+  const handleResetData = () => {
+    Alert.alert(
+      'Restaurar Dados Originais',
+      'Deseja redefinir as publicações do aplicativo para os dados padrão de exemplo? Todos os posts e comentários criados durante os testes serão restaurados.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Restaurar',
+          style: 'destructive',
+          onPress: () => {
+            resetToDefaults();
+            Alert.alert('Restaurado!', 'Os dados padrão foram restaurados com sucesso.');
+          },
+        },
+      ]
+    );
+  };
 
   const handleLogout = () => {
     Alert.alert('Desconectar', 'Deseja realmente sair da sua conta?', [
@@ -162,6 +182,48 @@ export default function SettingsScreen() {
                 trackColor={{ false: theme.border, true: theme.primary }}
               />
             </View>
+          </View>
+        </View>
+
+        {/* Armazenamento Local & Dados */}
+        <View style={styles.section}>
+          <AppText variant="caption" weight="bold" color="secondary" style={styles.sectionHeader}>
+            ARMAZENAMENTO LOCAL
+          </AppText>
+          <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={styles.settingItem}>
+              <View style={styles.settingInfo}>
+                <AppText variant="body" weight="medium">
+                  Persistência Offline
+                </AppText>
+                <AppText variant="caption" color="secondary">
+                  Posts, fotos e comentários salvos no dispositivo
+                </AppText>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Ionicons name="checkmark-circle" size={18} color="#10B981" />
+                <AppText variant="caption" weight="semibold" style={{ color: '#10B981' }}>
+                  Ativa
+                </AppText>
+              </View>
+            </View>
+
+            <View style={[styles.divider, { backgroundColor: theme.borderLight }]} />
+
+            <Pressable
+              onPress={handleResetData}
+              style={({ pressed }) => [styles.settingItem, pressed && { opacity: 0.7 }]}
+            >
+              <View style={styles.settingInfo}>
+                <AppText variant="body" weight="medium" style={{ color: theme.error }}>
+                  Restaurar Dados Padrão
+                </AppText>
+                <AppText variant="caption" color="secondary">
+                  Limpa posts de teste e restaura as publicações originais
+                </AppText>
+              </View>
+              <Ionicons name="refresh-outline" size={20} color={theme.error} />
+            </Pressable>
           </View>
         </View>
 

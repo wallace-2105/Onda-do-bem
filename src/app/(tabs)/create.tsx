@@ -302,90 +302,147 @@ export default function CreatePostScreen() {
           </View>
         </View>
 
-        {/* Foto da Ação com Câmera e Galeria */}
+        {/* Foto da Ação (Câmera, Galeria ou Exemplo) */}
         <View style={styles.formGroup}>
-          <AppText variant="label" weight="semibold" style={styles.label}>
-            Foto da Ação
-          </AppText>
+          <View style={styles.photoHeaderRow}>
+            <AppText variant="label" weight="semibold" style={styles.label}>
+              Foto da Ação
+            </AppText>
+            {isCustomPhoto ? (
+              <View style={styles.customBadge}>
+                <Ionicons name="checkmark-circle" size={13} color="#10B981" />
+                <AppText variant="caption" weight="semibold" style={styles.customBadgeText}>
+                  Foto do Seu Dispositivo
+                </AppText>
+              </View>
+            ) : null}
+          </View>
 
-          {/* Botões de Câmera e Galeria */}
+          {/* Botões de Ação para Câmera e Galeria */}
           <View style={styles.photoActionsRow}>
             <Pressable
               onPress={handleTakePhoto}
               disabled={photoPicking}
-              style={[
+              style={({ pressed }) => [
                 styles.photoActionButton,
                 {
                   backgroundColor: theme.surfaceElevated,
-                  borderColor: theme.border,
+                  borderColor: isCustomPhoto ? theme.primary : theme.border,
                 },
+                pressed && { opacity: 0.7 },
               ]}
             >
-              {photoPicking ? (
-                <ActivityIndicator size="small" color={theme.primary} />
-              ) : (
-                <Ionicons name="camera" size={20} color={theme.primary} />
-              )}
-              <AppText variant="bodySm" weight="medium" style={{ color: theme.text, marginLeft: 8 }}>
-                Tirar Foto
-              </AppText>
+              <View style={[styles.photoActionIconBox, { backgroundColor: theme.primaryLight }]}>
+                {photoPicking ? (
+                  <ActivityIndicator size="small" color={theme.primary} />
+                ) : (
+                  <Ionicons name="camera" size={20} color={theme.primary} />
+                )}
+              </View>
+              <View style={styles.photoActionTextBox}>
+                <AppText variant="bodySm" weight="bold" style={{ color: theme.text }}>
+                  Tirar Foto
+                </AppText>
+                <AppText variant="caption" color="muted">
+                  Abrir câmera
+                </AppText>
+              </View>
             </Pressable>
 
             <Pressable
               onPress={handlePickFromGallery}
               disabled={photoPicking}
-              style={[
+              style={({ pressed }) => [
                 styles.photoActionButton,
                 {
                   backgroundColor: theme.surfaceElevated,
                   borderColor: theme.border,
                 },
+                pressed && { opacity: 0.7 },
               ]}
             >
-              <Ionicons name="images" size={20} color={theme.textSecondary} />
-              <AppText variant="bodySm" weight="medium" style={{ color: theme.text, marginLeft: 8 }}>
-                Galeria
-              </AppText>
+              <View style={[styles.photoActionIconBox, { backgroundColor: theme.surface }]}>
+                <Ionicons name="images" size={20} color={theme.textSecondary} />
+              </View>
+              <View style={styles.photoActionTextBox}>
+                <AppText variant="bodySm" weight="bold" style={{ color: theme.text }}>
+                  Galeria
+                </AppText>
+                <AppText variant="caption" color="muted">
+                  Escolher foto
+                </AppText>
+              </View>
             </Pressable>
           </View>
 
-          <View style={styles.photoPreviewContainer}>
+          {/* Container de Preview da Foto */}
+          <View style={[styles.photoPreviewContainer, { borderColor: theme.border }]}>
             <Image
               source={{ uri: selectedPhoto }}
               style={styles.photoPreview}
               contentFit="cover"
+              transition={300}
             />
+
+            {/* Overlay Badge */}
+            <View style={styles.previewOverlayBadge}>
+              <Ionicons
+                name={isCustomPhoto ? 'camera' : 'sparkles'}
+                size={13}
+                color="#FFFFFF"
+              />
+              <AppText variant="caption" style={styles.previewBadgeText}>
+                {isCustomPhoto ? 'Foto Capturada' : 'Foto de Exemplo'}
+              </AppText>
+            </View>
+
+            {/* Botão para trocar ou remover foto customizada */}
+            {isCustomPhoto && (
+              <Pressable
+                onPress={handleRemovePhoto}
+                style={styles.removePhotoBtn}
+                hitSlop={8}
+              >
+                <Ionicons name="close-circle" size={28} color="#FFFFFF" />
+              </Pressable>
+            )}
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetsRow}>
-            {SAMPLE_PHOTO_PRESETS.map((preset) => {
-              const isSelected = !isCustomPhoto && selectedPhoto === preset.url;
-              return (
-                <Pressable
-                  key={preset.label}
-                  onPress={() => {
-                    setSelectedPhoto(preset.url);
-                    setIsCustomPhoto(false);
-                  }}
-                  style={[
-                    styles.presetButton,
-                    {
-                      borderColor: isSelected ? theme.primary : theme.border,
-                      backgroundColor: isSelected ? theme.primaryLight : theme.surface,
-                    },
-                  ]}
-                >
-                  <AppText
-                    variant="caption"
-                    weight={isSelected ? 'bold' : 'regular'}
-                    style={{ color: isSelected ? theme.primary : theme.textSecondary }}
+          {/* Opções Rápidas de Exemplo (Presets) */}
+          <View style={styles.presetsContainer}>
+            <AppText variant="caption" color="muted" style={styles.presetsTitle}>
+              Ou selecione uma foto de exemplo:
+            </AppText>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetsRow}>
+              {SAMPLE_PHOTO_PRESETS.map((preset) => {
+                const isSelected = !isCustomPhoto && selectedPhoto === preset.url;
+                return (
+                  <Pressable
+                    key={preset.label}
+                    onPress={() => {
+                      setSelectedPhoto(preset.url);
+                      setIsCustomPhoto(false);
+                    }}
+                    style={[
+                      styles.presetButton,
+                      {
+                        borderColor: isSelected ? theme.primary : theme.border,
+                        backgroundColor: isSelected ? theme.primaryLight : theme.surface,
+                      },
+                    ]}
                   >
-                    {preset.label}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+                    <AppText
+                      variant="caption"
+                      weight={isSelected ? 'bold' : 'regular'}
+                      style={{ color: isSelected ? theme.primary : theme.textSecondary }}
+                    >
+                      {preset.label}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
         </View>
 
         {/* Botão de Publicar */}
@@ -450,6 +507,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.sm,
   },
+  photoHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.xs,
+  },
+  customBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+    gap: 4,
+  },
+  customBadgeText: {
+    color: '#10B981',
+    fontSize: 11,
+  },
   photoActionsRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
@@ -459,25 +535,66 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     padding: Spacing.sm,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
+    gap: Spacing.sm,
+  },
+  photoActionIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoActionTextBox: {
+    flex: 1,
   },
   photoPreviewContainer: {
     width: '100%',
-    height: 180,
+    height: 200,
     borderRadius: BorderRadius.md,
     overflow: 'hidden',
-    marginTop: 4,
+    position: 'relative',
     backgroundColor: '#0F172A',
+    borderWidth: 1,
   },
   photoPreview: {
     width: '100%',
     height: '100%',
   },
+  previewOverlayBadge: {
+    position: 'absolute',
+    bottom: Spacing.sm,
+    left: Spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    gap: 4,
+  },
+  previewBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: FontWeight.medium,
+  },
+  removePhotoBtn: {
+    position: 'absolute',
+    top: Spacing.sm,
+    right: Spacing.sm,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    borderRadius: BorderRadius.full,
+  },
+  presetsContainer: {
+    marginTop: Spacing.sm,
+  },
+  presetsTitle: {
+    marginBottom: 4,
+  },
   presetsRow: {
-    marginTop: Spacing.xs,
+    marginTop: 2,
   },
   presetButton: {
     paddingHorizontal: Spacing.sm,

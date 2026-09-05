@@ -38,7 +38,7 @@ const SAMPLE_PHOTO_PRESETS = [
   },
   {
     label: 'Horta / Alimentos',
-    url: 'https://images.unsplash.com/photo-1592417817098-8f3d6910985b?w=800&auto=format&fit=crop',
+    url: 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?w=800&auto=format&fit=crop',
   },
   {
     label: 'Animais / Resgate',

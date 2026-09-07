@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { Image } from 'expo-image';
 
 import { useAppTheme } from '@/hooks/use-theme';
 import { useFeedStore } from '@/store/feed.store';
@@ -101,9 +102,11 @@ export default function FeedScreen() {
       {/* Top App Bar */}
       <View style={[styles.topBar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <View style={styles.brandRow}>
-          <AppText variant="h2" style={{ color: theme.primary, marginRight: 6 }}>
-            🌊
-          </AppText>
+          <Image
+            source={require('@/../assets/images/onda-logo.jpg')}
+            style={styles.brandLogo}
+            contentFit="cover"
+          />
           <View>
             <AppText variant="h3" weight="bold" style={{ color: theme.text }}>
               Onda do Bem
@@ -172,6 +175,15 @@ const styles = StyleSheet.create({
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  brandLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: Spacing.sm,
+    borderWidth: 1.5,
+    borderColor: '#0EA5E9',
+    backgroundColor: '#BAE6FD',
   },
   topActions: {
     flexDirection: 'row',

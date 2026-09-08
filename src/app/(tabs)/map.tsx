@@ -27,6 +27,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { PostCategory } from '@/types/entities';
 import { CATEGORY_INFO } from '@/constants/mock-data';
+import { getPostImageSource } from '@/utils/post-image';
 
 export default function MapScreen() {
   const theme = useAppTheme();
@@ -346,14 +347,18 @@ export default function MapScreen() {
 
           {/* Conteúdo Principal do Card */}
           <View style={styles.cardContentRow}>
-            {selectedPost.imageUrl && (
-              <Image
-                source={{ uri: selectedPost.imageUrl }}
-                style={styles.cardThumbnail}
-                contentFit="cover"
-                transition={200}
-              />
-            )}
+            {(() => {
+              const imageSource = getPostImageSource(selectedPost);
+              if (!imageSource) return null;
+              return (
+                <Image
+                  source={imageSource}
+                  style={styles.cardThumbnail}
+                  contentFit="cover"
+                  transition={200}
+                />
+              );
+            })()}
             <View style={styles.cardTextInfo}>
               <AppText variant="bodySm" weight="bold" numberOfLines={2}>
                 {selectedPost.title}

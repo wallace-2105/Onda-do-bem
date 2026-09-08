@@ -24,6 +24,7 @@ import { useAppTheme } from '@/hooks/use-theme';
 import { useFeedStore } from '@/store/feed.store';
 import { Spacing, BorderRadius, Shadows, FontWeight } from '@/constants/theme';
 import { CATEGORY_INFO } from '@/constants/mock-data';
+import { getPostImageSource } from '@/utils/post-image';
 
 interface PostCardProps {
   post: Post;
@@ -114,24 +115,28 @@ export function PostCard({ post, onToggleLike }: PostCardProps) {
       </View>
 
       {/* Imagem do Post */}
-      {post.imageUrl ? (
-        <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: post.imageUrl }}
-            style={styles.image}
-            contentFit="cover"
-            transition={300}
-          />
-          {post.impactScore > 0 && (
-            <View style={styles.impactBadge}>
-              <Ionicons name="sparkles" size={13} color="#FFFFFF" />
-              <AppText variant="caption" style={styles.impactText}>
-                Impacto: +{post.impactScore}
-              </AppText>
-            </View>
-          )}
-        </View>
-      ) : null}
+      {(() => {
+        const imageSource = getPostImageSource(post);
+        if (!imageSource) return null;
+        return (
+          <View style={styles.imageContainer}>
+            <Image
+              source={imageSource}
+              style={styles.image}
+              contentFit="cover"
+              transition={300}
+            />
+            {post.impactScore > 0 && (
+              <View style={styles.impactBadge}>
+                <Ionicons name="sparkles" size={13} color="#FFFFFF" />
+                <AppText variant="caption" style={styles.impactText}>
+                  Impacto: +{post.impactScore}
+                </AppText>
+              </View>
+            )}
+          </View>
+        );
+      })()}
 
       {/* Barra de Ações (Curtir, Comentar, Compartilhar) */}
       <View style={[styles.actionsBar, { borderTopColor: theme.borderLight }]}>

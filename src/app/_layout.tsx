@@ -132,12 +132,12 @@ export default function RootLayout() {
                   { transform: [{ scale: logoScale }] },
                 ]}
               >
-                {/* Logo Circular da Tartaruga Surfista */}
-                <View style={styles.logoCircle}>
+                {/* Logo da Tartaruga Surfista (Sem fundo) */}
+                <View style={styles.logoContainer}>
                   <Image
-                    source={require('@/../assets/images/onda-logo.jpg')}
+                    source={require('@/../assets/images/onda-logo.png')}
                     style={styles.logoImage}
-                    contentFit="cover"
+                    contentFit="contain"
                   />
                 </View>
 
@@ -170,19 +170,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoCircle: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    overflow: 'hidden',
-    borderWidth: 4.5,
-    borderColor: '#FFFFFF',
-    backgroundColor: '#BAE6FD',
+  logoContainer: {
+    width: 170,
+    height: 170,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    elevation: 14,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
   },
   logoImage: {
     width: '100%',

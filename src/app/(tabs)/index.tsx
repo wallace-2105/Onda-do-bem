@@ -103,9 +103,9 @@ export default function FeedScreen() {
       <View style={[styles.topBar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <View style={styles.brandRow}>
           <Image
-            source={require('@/../assets/images/onda-logo.jpg')}
+            source={require('@/../assets/images/onda-logo.png')}
             style={styles.brandLogo}
-            contentFit="cover"
+            contentFit="contain"
           />
           <View>
             <AppText variant="h3" weight="bold" style={{ color: theme.text }}>
@@ -177,13 +177,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   brandLogo: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
     marginRight: Spacing.sm,
-    borderWidth: 1.5,
-    borderColor: '#0EA5E9',
-    backgroundColor: '#BAE6FD',
   },
   topActions: {
     flexDirection: 'row',

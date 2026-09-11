@@ -15,6 +15,7 @@ import { Platform } from 'react-native';
 
 import { useAppTheme } from '@/hooks/use-theme';
 import { FontWeight } from '@/constants/theme';
+import { ClayPostButton } from '@/components/navigation/clay-post-button';
 
 export default function TabLayout() {
   const theme = useAppTheme();
@@ -33,6 +34,7 @@ export default function TabLayout() {
           paddingBottom: Platform.OS === 'ios' ? 28 : 8,
           paddingTop: 8,
           elevation: 8,
+          overflow: 'visible',
         },
         tabBarLabelStyle: {
           fontSize: 12,
@@ -70,13 +72,8 @@ export default function TabLayout() {
         name="create"
         options={{
           title: 'Postar',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'add-circle' : 'add-circle-outline'}
-              size={28}
-              color={color}
-            />
-          ),
+          tabBarLabel: () => null,
+          tabBarButton: (props) => <ClayPostButton {...props} />,
         }}
       />
       <Tabs.Screen

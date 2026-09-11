@@ -2,17 +2,18 @@
  * Onda do Bem — PostCard Component
  *
  * Exibe uma publicação de ação positiva com cabeçalho de autor,
- * badge de categoria, imagem, métrica de impacto, curtidas
- * e seção interativa de comentários com mensagens de incentivo.
+ * badge de rank do autor, imagem, métrica de impacto, curtidas
+ * com animação de feedback (+2 Impacto) e seção interativa de comentários.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   StyleSheet,
   Pressable,
   Share,
   TextInput,
+  Animated,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +26,7 @@ import { useFeedStore } from '@/store/feed.store';
 import { Spacing, BorderRadius, Shadows, FontWeight } from '@/constants/theme';
 import { CATEGORY_INFO } from '@/constants/mock-data';
 import { getPostImageSource } from '@/utils/post-image';
+import { calculateUserRank } from '@/utils/rank';
 
 interface PostCardProps {
   post: Post;
@@ -36,6 +38,13 @@ export function PostCard({ post, onToggleLike }: PostCardProps) {
   const addComment = useFeedStore((s) => s.addComment);
   const [commentOpen, setCommentOpen] = useState(false);
   const [newCommentText, setNewCommentText] = useState('');
+
+  const [showImpactToast, setShowImpactToast] = useState(false);
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  const heartScale = useRef(new Animated.Value(1)).current;
+
+  const authorImpact = post.author?.totalImpact || 0;
+  const authorRank = calculateUserRank(authorImpact);
 
   const categoryMeta = CATEGORY_INFO[post.category] ?? {
     label: 'Ação do Bem',
@@ -50,6 +59,30 @@ export function PostCard({ post, onToggleLike }: PostCardProps) {
       });
     } catch {
       // ignore
+    }
+  };
+
+  const handleLikePress = () => {
+    const willBeLiked = !post.isLiked;
+    onToggleLike(post.id);
+
+    // Animação de pulso no coração
+    Animated.sequence([
+      Animated.spring(heartScale, { toValue: 1.35, friction: 3, useNativeDriver: true }),
+      Animated.spring(heartScale, { toValue: 1, friction: 4, useNativeDriver: true }),
+    ]).start();
+
+    // Feedback visual quando curte: "+2 Impacto! ⭐"
+    if (willBeLiked) {
+      setShowImpactToast(true);
+      floatAnim.setValue(0);
+      Animated.timing(floatAnim, {
+        toValue: 1,
+        duration: 1100,
+        useNativeDriver: true,
+      }).start(() => {
+        setShowImpactToast(false);
+      });
     }
   };
 
@@ -80,8 +113,23 @@ export function PostCard({ post, onToggleLike }: PostCardProps) {
           />
           <View style={styles.authorInfo}>
             <View style={styles.nameRow}>
-              <AppText variant="body" weight="semibold">
+              <AppText variant="body" weight="semibold" numberOfLines={1} style={styles.authorName}>
                 {post.author.displayName}
+              </AppText>
+              <View
+                style={[
+                  styles.authorRankBadge,
+                  { backgroundColor: authorRank.color + '1A', borderColor: authorRank.color + '4D' },
+                ]}
+              >
+                <AppText variant="caption" style={[styles.authorRankText, { color: authorRank.color }]}>
+                  {authorRank.badge} Rank {authorRank.rank}
+                </AppText>
+              </View>
+            </View>
+            <View style={styles.metaRow}>
+              <AppText variant="caption" color="secondary" numberOfLines={1} style={styles.locationText}>
+                {post.locationName || `@${post.author.username}`}
               </AppText>
               <AppText variant="caption" color="muted" style={styles.dot}>
                 •
@@ -89,10 +137,13 @@ export function PostCard({ post, onToggleLike }: PostCardProps) {
               <AppText variant="caption" color="muted">
                 {dateFormatted}
               </AppText>
+              <AppText variant="caption" color="muted" style={styles.dot}>
+                •
+              </AppText>
+              <AppText variant="caption" weight="semibold" style={{ color: theme.secondary }}>
+                {authorImpact} pts
+              </AppText>
             </View>
-            <AppText variant="caption" color="secondary" numberOfLines={1}>
-              {post.locationName || `@${post.author.username}`}
-            </AppText>
           </View>
         </View>
 
@@ -141,27 +192,63 @@ export function PostCard({ post, onToggleLike }: PostCardProps) {
       {/* Barra de Ações (Curtir, Comentar, Compartilhar) */}
       <View style={[styles.actionsBar, { borderTopColor: theme.borderLight }]}>
         <View style={styles.leftActions}>
-          <Pressable
-            onPress={() => onToggleLike(post.id)}
-            style={({ pressed }) => [styles.actionButton, pressed && styles.actionPressed]}
-            hitSlop={8}
-          >
-            <Ionicons
-              name={post.isLiked ? 'heart' : 'heart-outline'}
-              size={24}
-              color={post.isLiked ? '#EF4444' : theme.textSecondary}
-            />
-            <AppText
-              variant="bodySm"
-              weight="medium"
-              style={{
-                color: post.isLiked ? '#EF4444' : theme.textSecondary,
-                marginLeft: Spacing.xs,
-              }}
+          <View style={styles.likeButtonWrapper}>
+            {showImpactToast && (
+              <Animated.View
+                style={[
+                  styles.floatingImpactToast,
+                  {
+                    opacity: floatAnim.interpolate({
+                      inputRange: [0, 0.15, 0.8, 1],
+                      outputRange: [0, 1, 1, 0],
+                    }),
+                    transform: [
+                      {
+                        translateY: floatAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, -32],
+                        }),
+                      },
+                      {
+                        scale: floatAnim.interpolate({
+                          inputRange: [0, 0.25, 1],
+                          outputRange: [0.7, 1.1, 0.95],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <AppText variant="caption" weight="bold" style={styles.floatingImpactText}>
+                  +2 Impacto! ⭐
+                </AppText>
+              </Animated.View>
+            )}
+
+            <Pressable
+              onPress={handleLikePress}
+              style={({ pressed }) => [styles.actionButton, pressed && styles.actionPressed]}
+              hitSlop={8}
             >
-              {post.likesCount}
-            </AppText>
-          </Pressable>
+              <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+                <Ionicons
+                  name={post.isLiked ? 'heart' : 'heart-outline'}
+                  size={24}
+                  color={post.isLiked ? '#EF4444' : theme.textSecondary}
+                />
+              </Animated.View>
+              <AppText
+                variant="bodySm"
+                weight="medium"
+                style={{
+                  color: post.isLiked ? '#EF4444' : theme.textSecondary,
+                  marginLeft: Spacing.xs,
+                }}
+              >
+                {post.likesCount}
+              </AppText>
+            </Pressable>
+          </View>
 
           <Pressable
             onPress={() => setCommentOpen(!commentOpen)}
@@ -209,22 +296,22 @@ export function PostCard({ post, onToggleLike }: PostCardProps) {
 
       {/* Seção expandida de Comentários */}
       {commentOpen && (
-        <View style={[styles.commentsSection, { backgroundColor: theme.surfaceElevated, borderTopColor: theme.borderLight }]}>
+        <View style={[styles.commentsSection, { borderTopColor: theme.borderLight }]}>
           <View style={styles.commentsHeader}>
             <View style={styles.commentsTitleRow}>
               <Ionicons name="chatbubbles" size={16} color={theme.primary} />
-              <AppText variant="caption" weight="bold" style={{ color: theme.primary, marginLeft: 6 }}>
-                MENSAGENS DE INCENTIVO ({commentsList.length})
+              <AppText variant="bodySm" weight="semibold" style={{ marginLeft: 6 }}>
+                Comentários e Incentivos ({commentsList.length})
               </AppText>
             </View>
             <Pressable onPress={() => setCommentOpen(false)} hitSlop={8}>
-              <Ionicons name="close" size={18} color={theme.textMuted} />
+              <Ionicons name="close" size={18} color={theme.textSecondary} />
             </Pressable>
           </View>
 
-          {/* Lista de Comentários Positivos */}
+          {/* Lista de Comentários */}
           {commentsList.map((c: Comment) => (
-            <View key={c.id} style={[styles.commentItem, { borderBottomColor: theme.borderLight }]}>
+            <View key={c.id} style={styles.commentItem}>
               <Avatar
                 source={c.author.avatarUrl}
                 name={c.author.displayName}
@@ -232,44 +319,40 @@ export function PostCard({ post, onToggleLike }: PostCardProps) {
               />
               <View style={styles.commentContent}>
                 <View style={styles.commentAuthorRow}>
-                  <AppText variant="caption" weight="bold">
+                  <AppText variant="caption" weight="semibold">
                     {c.author.displayName}
                   </AppText>
-                  <AppText variant="caption" color="muted" style={{ fontSize: 10, marginLeft: 6 }}>
-                    {c.createdAt
-                      ? new Date(c.createdAt).toLocaleDateString('pt-BR', {
-                        day: '2-digit',
-                        month: 'short',
-                      })
-                      : 'Agora'}
+                  <AppText variant="caption" color="muted" style={{ marginLeft: 4 }}>
+                    • @{c.author.username}
                   </AppText>
                 </View>
-                <AppText variant="bodySm" color="secondary" style={styles.commentText}>
+                <AppText variant="caption" color="secondary" style={styles.commentText}>
                   {c.content}
                 </AppText>
               </View>
             </View>
           ))}
 
-          {/* Input para enviar nova mensagem positiva */}
-          <View style={[styles.inputRow, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          {/* Input para adicionar comentário */}
+          <View style={[styles.inputRow, { borderColor: theme.border, backgroundColor: theme.surfaceElevated }]}>
             <TextInput
-              placeholder="Deixe uma mensagem de apoio..."
+              placeholder="Envie uma mensagem de incentivo..."
               placeholderTextColor={theme.textMuted}
               value={newCommentText}
               onChangeText={setNewCommentText}
               style={[styles.input, { color: theme.text }]}
               onSubmitEditing={handleSendComment}
+              returnKeyType="send"
             />
             <Pressable
               onPress={handleSendComment}
-              disabled={!newCommentText.trim()}
               style={[
                 styles.sendBtn,
                 { backgroundColor: newCommentText.trim() ? theme.primary : theme.border },
               ]}
+              disabled={!newCommentText.trim()}
             >
-              <Ionicons name="send" size={15} color="#FFFFFF" />
+              <Ionicons name="arrow-up" size={16} color="#FFFFFF" />
             </Pressable>
           </View>
         </View>
@@ -291,7 +374,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
   },
   authorContainer: {
     flexDirection: 'row',
@@ -306,6 +391,31 @@ const styles = StyleSheet.create({
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  authorName: {
+    maxWidth: 140,
+  },
+  authorRankBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    marginLeft: 6,
+  },
+  authorRankText: {
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  locationText: {
+    maxWidth: 110,
   },
   dot: {
     marginHorizontal: 4,
@@ -327,9 +437,9 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     width: '100%',
-    height: 260,
+    height: 220,
     position: 'relative',
-    backgroundColor: '#0F172A',
+    backgroundColor: '#E2E8F0',
   },
   image: {
     width: '100%',
@@ -339,37 +449,62 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: Spacing.sm,
     right: Spacing.sm,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.72)',
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
     borderRadius: BorderRadius.full,
-    gap: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   impactText: {
     color: '#FFFFFF',
-    fontWeight: FontWeight.semibold,
+    fontWeight: FontWeight.bold,
+    marginLeft: 4,
   },
   actionsBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.xs,
     borderTopWidth: 1,
   },
   leftActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.lg,
+  },
+  likeButtonWrapper: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  floatingImpactToast: {
+    position: 'absolute',
+    top: -6,
+    left: -4,
+    backgroundColor: '#10B981',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+    zIndex: 10,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  floatingImpactText: {
+    color: '#FFFFFF',
+    fontSize: 11,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: Spacing.xs,
+    paddingRight: Spacing.md,
   },
   actionPressed: {
-    opacity: 0.6,
+    opacity: 0.7,
   },
   openCommentsBtn: {
     paddingHorizontal: Spacing.md,

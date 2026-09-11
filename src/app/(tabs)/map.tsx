@@ -24,10 +24,11 @@ import { useAppTheme } from '@/hooks/use-theme';
 import { useFeedStore } from '@/store/feed.store';
 import { AppText } from '@/components/ui/text';
 import { Avatar } from '@/components/ui/avatar';
-import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
+import { Spacing, BorderRadius, Shadows, FontWeight } from '@/constants/theme';
 import { PostCategory } from '@/types/entities';
 import { CATEGORY_INFO } from '@/constants/mock-data';
 import { getPostImageSource } from '@/utils/post-image';
+import { calculateUserRank } from '@/utils/rank';
 
 export default function MapScreen() {
   const theme = useAppTheme();
@@ -378,6 +379,24 @@ export default function MapScreen() {
                 <AppText variant="caption" weight="medium" style={{ marginLeft: 6 }}>
                   {selectedPost.author.displayName}
                 </AppText>
+                {(() => {
+                  const authorRank = calculateUserRank(selectedPost.author?.totalImpact || 0);
+                  return (
+                    <View
+                      style={[
+                        styles.authorRankBadgeMini,
+                        { backgroundColor: authorRank.color + '20', marginLeft: 6 },
+                      ]}
+                    >
+                      <AppText
+                        variant="caption"
+                        style={{ color: authorRank.color, fontSize: 10, fontWeight: FontWeight.bold }}
+                      >
+                        {authorRank.badge} R{authorRank.rank}
+                      </AppText>
+                    </View>
+                  );
+                })()}
               </View>
             </View>
           </View>
@@ -522,6 +541,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
+  },
+  authorRankBadgeMini: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: BorderRadius.full,
   },
   cardFooter: {
     flexDirection: 'row',

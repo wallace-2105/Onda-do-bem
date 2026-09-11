@@ -60,6 +60,8 @@ export interface User {
   location: string | null;
   totalActions: number;
   totalImpact: number;
+  rank?: number;
+  rankTitle?: string;
   createdAt: string;
   updatedAt: string;
 }

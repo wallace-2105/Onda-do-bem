@@ -137,12 +137,6 @@ export function PostCard({ post, onToggleLike }: PostCardProps) {
               <AppText variant="caption" color="muted">
                 {dateFormatted}
               </AppText>
-              <AppText variant="caption" color="muted" style={styles.dot}>
-                •
-              </AppText>
-              <AppText variant="caption" weight="semibold" style={{ color: theme.secondary }}>
-                {authorImpact} pts
-              </AppText>
             </View>
           </View>
         </View>
@@ -391,10 +385,10 @@ const styles = StyleSheet.create({
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
+    gap: 6,
   },
   authorName: {
-    maxWidth: 140,
+    flexShrink: 1,
   },
   authorRankBadge: {
     flexDirection: 'row',
@@ -403,7 +397,7 @@ const styles = StyleSheet.create({
     paddingVertical: 1.5,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    marginLeft: 6,
+    flexShrink: 0,
   },
   authorRankText: {
     fontSize: 10,
@@ -413,17 +407,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
+    flexShrink: 1,
   },
   locationText: {
-    maxWidth: 110,
+    flexShrink: 1,
   },
   dot: {
     marginHorizontal: 4,
   },
   categoryBadge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: BorderRadius.full,
+    flexShrink: 0,
+    alignSelf: 'flex-start',
   },
   content: {
     paddingHorizontal: Spacing.md,

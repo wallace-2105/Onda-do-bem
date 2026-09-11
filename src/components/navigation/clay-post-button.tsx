@@ -243,7 +243,7 @@ export function ClayPostButton({
   );
 }
 
-const BUTTON_SIZE = 72;
+const BUTTON_SIZE = 56;
 
 const styles = StyleSheet.create({
   container: {
@@ -251,7 +251,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 999,
-    overflow: 'visible',
   },
   pressable: {
     alignItems: 'center',
@@ -259,7 +258,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   buttonWrapper: {
-    marginTop: Platform.OS === 'ios' ? -28 : -26,
+    marginTop: Platform.OS === 'ios' ? -12 : -10,
     width: BUTTON_SIZE,
     height: BUTTON_SIZE,
     alignItems: 'center',
@@ -267,35 +266,32 @@ const styles = StyleSheet.create({
   },
   buttonShadow: {
     position: 'absolute',
-    bottom: -6,
-    width: BUTTON_SIZE * 0.82,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: 'rgba(76, 150, 24, 0.38)',
-    // Blur via scale trick — React Native doesn't have filter, so we layer
+    bottom: -4,
+    width: BUTTON_SIZE * 0.85,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: 'rgba(76, 150, 24, 0.4)',
   },
   clayImage: {
     width: BUTTON_SIZE,
     height: BUTTON_SIZE,
   },
   clayImageFocused: {
-    // Slightly brighter when on the create tab
-    opacity: 0.92,
+    opacity: 0.95,
   },
   // Área de overlay para os blobs de splash
   splashArea: {
     position: 'absolute',
-    width: BUTTON_SIZE * 3,
-    height: BUTTON_SIZE * 3,
+    width: BUTTON_SIZE * 2.6,
+    height: BUTTON_SIZE * 2.6,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: Platform.OS === 'ios' ? -28 : -26,
+    marginTop: Platform.OS === 'ios' ? -12 : -10,
     zIndex: 5,
     pointerEvents: 'none',
   },
   splashBlob: {
     position: 'absolute',
-    // Green clay color matching the icon
     backgroundColor: '#8DC53E',
   },
 });

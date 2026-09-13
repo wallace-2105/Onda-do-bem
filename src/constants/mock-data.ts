@@ -531,7 +531,7 @@ export const INITIAL_POSTS: Post[] = [
     description:
       'Descemos de caiaque ao longo de 4km do rio para retirar garrafas PET, pneus e sacolas plásticas presas nas margens. Foram mais de 240kg de materiais retirados e encaminhados para cooperativas! 🛶💦🌿',
     category: PostCategory.WATER_CONSERVATION,
-    imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&auto=format&fit=crop',
+    imageUrl: 'asset:rio-pinheiros',
     latitude: -23.5934,
     longitude: -46.6908,
     locationName: 'Parque Linear Bruno Covas, São Paulo - SP',

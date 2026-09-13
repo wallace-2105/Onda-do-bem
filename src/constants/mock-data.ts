@@ -355,7 +355,7 @@ export const INITIAL_POSTS: Post[] = [
     description:
       'Junto com comerciantes e moradores da rua, fizemos uma grande faxina coletiva! Retiramos entulhos acumulados, lavamos as calçadas históricas e instalamos lixeiras de coleta seletiva coloridas. Cidade limpa é dever de todos nós! 🧹🏛️💛',
     category: PostCategory.RECYCLING,
-    imageUrl: 'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=800&auto=format&fit=crop',
+    imageUrl: 'asset:street-recycling-bins',
     latitude: -12.9714,
     longitude: -38.5113,
     locationName: 'Pelourinho, Salvador - BA',

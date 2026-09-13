@@ -16,6 +16,13 @@ export function getPostImageSource(post: { id?: string; imageUrl?: string | null
   ) {
     return require('@/../assets/images/street-recycling-bins.jpg');
   }
+  if (
+    post.id === 'post-8' ||
+    post.imageUrl === 'asset:rio-pinheiros' ||
+    post.imageUrl?.includes('photo-1544551763-46a013bb70d5')
+  ) {
+    return require('@/../assets/images/rio-pinheiros.jpeg');
+  }
   if (!post.imageUrl) {
     return null;
   }

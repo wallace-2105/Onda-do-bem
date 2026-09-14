@@ -1004,7 +1004,7 @@ export const INITIAL_POSTS: Post[] = [
     description:
       'Colhemos alface, tomate, cenoura e ervas frescas cultivadas sem agrotóxicos. Distribuímos mais de 60 cestas agroecológicas para famílias do bairro. Comida de verdade ao alcance de todos! 🥬🥕🍅',
     category: PostCategory.COMMUNITY_GARDEN,
-    imageUrl: 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?w=800&auto=format&fit=crop',
+    imageUrl: 'asset:horta-solidaria',
     latitude: -23.5505,
     longitude: -46.6333,
     locationName: 'Vila Mariana, São Paulo - SP',

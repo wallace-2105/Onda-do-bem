@@ -23,6 +23,13 @@ export function getPostImageSource(post: { id?: string; imageUrl?: string | null
   ) {
     return require('@/../assets/images/rio-pinheiros.jpeg');
   }
+  if (
+    post.id === 'post-4' ||
+    post.imageUrl === 'asset:horta-solidaria' ||
+    post.imageUrl?.includes('photo-1610348725531-843dff563e2c')
+  ) {
+    return require('@/../assets/images/Horta Solidária.png');
+  }
   if (!post.imageUrl) {
     return null;
   }

@@ -30,6 +30,24 @@ export function getPostImageSource(post: { id?: string; imageUrl?: string | null
   ) {
     return require('@/../assets/images/Horta Solidária.png');
   }
+  if (
+    post.id === 'post-12' ||
+    post.imageUrl === 'asset:beach-cans-cleanup'
+  ) {
+    return require('@/../assets/images/beach-cans-cleanup.jpg');
+  }
+  if (
+    post.id === 'post-13' ||
+    post.imageUrl === 'asset:beach-plastic-cups'
+  ) {
+    return require('@/../assets/images/beach-plastic-cups.jpg');
+  }
+  if (
+    post.id === 'post-14' ||
+    post.imageUrl === 'asset:beach-crowd-trash'
+  ) {
+    return require('@/../assets/images/beach-crowd-trash.jpg');
+  }
   if (!post.imageUrl) {
     return null;
   }

@@ -254,6 +254,21 @@ export const useFeedStore = create<FeedState>()(
       name: '@onda_do_bem:feed',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ posts: state.posts, currentUser: state.currentUser }),
+      merge: (persistedState: any, currentState: FeedState) => {
+        if (persistedState && Array.isArray(persistedState.posts)) {
+          const persistedIds = new Set(persistedState.posts.map((p: Post) => p.id));
+          const missingInitialPosts = hydratedInitialPosts.filter((p) => !persistedIds.has(p.id));
+          return {
+            ...currentState,
+            ...persistedState,
+            posts: [...persistedState.posts, ...missingInitialPosts],
+          };
+        }
+        return {
+          ...currentState,
+          ...persistedState,
+        };
+      },
     }
   )
 );

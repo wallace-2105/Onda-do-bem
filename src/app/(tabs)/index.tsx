@@ -5,7 +5,7 @@
  * stories no topo, filtros por categoria e pull-to-refresh.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -46,6 +46,11 @@ export default function FeedScreen() {
     if (selectedCategory === 'ALL') return posts;
     return posts.filter((post) => post.category === selectedCategory);
   }, [posts, selectedCategory]);
+
+  // Carrega publicações atualizadas da API ao abrir a tela
+  useEffect(() => {
+    refreshFeed();
+  }, [refreshFeed]);
 
   const renderHeader = () => (
     <View style={styles.headerComponent}>

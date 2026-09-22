@@ -11,8 +11,10 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { type Post, type Comment, type User, PostCategory } from '@/types/entities';
+import type { PaginatedResponse } from '@/types/api';
 import { INITIAL_POSTS, CURRENT_USER } from '@/constants/mock-data';
 import { calculateUserRank } from '@/utils/rank';
+import { apiGet, apiPost, Endpoints } from '@/services/api';
 
 interface CreatePostInput {
   title: string;
@@ -144,6 +146,11 @@ export const useFeedStore = create<FeedState>()(
             return post;
           });
 
+          // Dispara chamada em segundo plano para o backend (se o ID for UUID da API)
+          if (!postId.startsWith('post-')) {
+            apiPost(Endpoints.posts.like(postId)).catch(() => {});
+          }
+
           return {
             posts: updatedPosts,
             currentUser: updatedCurrentUser,
@@ -193,6 +200,16 @@ export const useFeedStore = create<FeedState>()(
             updatedAt: new Date().toISOString(),
           };
 
+          // Tenta persistir no backend
+          apiPost<any>(Endpoints.posts.create, {
+            title: input.title,
+            description: input.description,
+            category: input.category,
+            imageUrl: newPost.imageUrl,
+            locationName: newPost.locationName,
+            impactValue: postImpact,
+          }).catch(() => {});
+
           return {
             posts: [newPost, ...state.posts],
             currentUser: updatedCurrentUser,
@@ -215,6 +232,10 @@ export const useFeedStore = create<FeedState>()(
             updatedAt: new Date().toISOString(),
           };
 
+          if (!postId.startsWith('post-')) {
+            apiPost(Endpoints.posts.comments(postId), { content: content.trim() }).catch(() => {});
+          }
+
           return {
             posts: state.posts.map((post) => {
               if (post.id === postId) {
@@ -233,9 +254,17 @@ export const useFeedStore = create<FeedState>()(
 
       refreshFeed: async () => {
         set({ isRefreshing: true });
-        // Simula delay de rede de 600ms
-        await new Promise((resolve) => setTimeout(resolve, 600));
-        set({ isRefreshing: false });
+        try {
+          const response = await apiGet<PaginatedResponse<Post>>(Endpoints.posts.list);
+          if (response?.data && Array.isArray(response.data) && response.data.length > 0) {
+            set({ posts: response.data });
+          }
+        } catch (error) {
+          // Mantém o estado persistido localmente se o backend não for alcançado
+          console.log('[FeedStore] Backend indisponível ou offline. Usando cache local.');
+        } finally {
+          set({ isRefreshing: false });
+        }
       },
 
       setSelectedCategory: (category) => {

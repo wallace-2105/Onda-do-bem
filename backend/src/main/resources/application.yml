@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: ondadobem-api
+
+  datasource:
+    # Por padrão roda com H2 em memória se nenhuma URL do PostgreSQL for informada
+    url: ${DATABASE_URL:jdbc:h2:mem:ondadobemdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    driver-class-name: ${DATABASE_DRIVER:org.h2.Driver}
+    username: ${DATABASE_USERNAME:sa}
+    password: ${DATABASE_PASSWORD:}
+
+  jpa:
+    database-platform: ${DATABASE_DIALECT:org.hibernate.dialect.H2Dialect}
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+server:
+  port: 8080
+
+app:
+  jwt:
+    # Chave secreta de no mínimo 256 bits para assinatura HMAC-SHA256
+    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    # 24 horas em milissegundos
+    access-token-expiration-ms: 86400000
+    # 7 dias em milissegundos
+    refresh-token-expiration-ms: 604800000

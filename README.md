@@ -90,7 +90,7 @@ O design system do Onda do Bem está definido em `src/constants/theme.ts`:
 - **Separação de camadas:** UI → Hooks → Services → API Client
 - **Estado:** Zustand (client) + TanStack Query (server) — nunca duplicados
 - **Preparado para backend:** Alterar apenas a camada de services quando a API estiver pronta
-
+testes
 ## 📋 Licença
 
 Este projeto está sob a licença MIT.

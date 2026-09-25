@@ -23,6 +23,10 @@ interface CreatePostInput {
   locationName?: string;
   imageUrl?: string;
   impactScore?: number;
+  latitude?: number | null;
+  longitude?: number | null;
+  startTime?: string | null;
+  endTime?: string | null;
 }
 
 interface FeedState {
@@ -31,7 +35,7 @@ interface FeedState {
   isRefreshing: boolean;
   selectedCategory: PostCategory | 'ALL';
   toggleLike: (postId: string) => void;
-  addPost: (input: CreatePostInput) => void;
+  addPost: (input: CreatePostInput) => Post;
   addComment: (postId: string, content: string) => void;
   refreshFeed: () => Promise<void>;
   setSelectedCategory: (category: PostCategory | 'ALL') => void;
@@ -158,7 +162,8 @@ export const useFeedStore = create<FeedState>()(
         });
       },
 
-      addPost: (input: CreatePostInput) => {
+      addPost: (input: CreatePostInput): Post => {
+        let createdPost: Post | null = null;
         set((state) => {
           const postImpact = input.impactScore || 10;
           const updatedActions = (state.currentUser.totalActions || 0) + 1;
@@ -188,8 +193,8 @@ export const useFeedStore = create<FeedState>()(
             imageUrl:
               input.imageUrl ||
               'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&auto=format&fit=crop',
-            latitude: -27.5954,
-            longitude: -48.548,
+            latitude: input.latitude !== undefined ? input.latitude : -27.5954,
+            longitude: input.longitude !== undefined ? input.longitude : -48.548,
             locationName: input.locationName || updatedCurrentUser.location || 'Brasil',
             likesCount: 1,
             commentsCount: 0,
@@ -198,7 +203,11 @@ export const useFeedStore = create<FeedState>()(
             comments: [],
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
+            startTime: input.startTime,
+            endTime: input.endTime,
           };
+
+          createdPost = newPost;
 
           // Tenta persistir no backend
           apiPost<any>(Endpoints.posts.create, {
@@ -207,6 +216,8 @@ export const useFeedStore = create<FeedState>()(
             category: input.category,
             imageUrl: newPost.imageUrl,
             locationName: newPost.locationName,
+            latitude: newPost.latitude,
+            longitude: newPost.longitude,
             impactValue: postImpact,
           }).catch(() => {});
 
@@ -215,6 +226,7 @@ export const useFeedStore = create<FeedState>()(
             currentUser: updatedCurrentUser,
           };
         });
+        return createdPost!;
       },
 
       addComment: (postId: string, content: string) => {

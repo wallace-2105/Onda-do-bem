@@ -85,6 +85,8 @@ export interface Post {
   comments?: Comment[];
   createdAt: string;
   updatedAt: string;
+  startTime?: string | null;
+  endTime?: string | null;
 }
 
 /** Curtida de uma publicação */

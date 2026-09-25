@@ -271,9 +271,12 @@ export const useFeedStore = create<FeedState>()(
           if (response?.data && Array.isArray(response.data) && response.data.length > 0) {
             set({ posts: response.data });
           }
-        } catch (error) {
+        } catch (error: any) {
           // Mantém o estado persistido localmente se o backend não for alcançado
-          console.log('[FeedStore] Backend indisponível ou offline. Usando cache local.');
+          const { Config } = await import('@/constants/config');
+          console.warn('[FeedStore] Backend indisponível ou offline. Usando cache local.');
+          console.warn('[FeedStore] URL tentada:', Config.apiBaseUrl);
+          console.warn('[FeedStore] Erro:', error?.code, error?.message);
         } finally {
           set({ isRefreshing: false });
         }

@@ -5,14 +5,14 @@
  * 1. Injetar o token de autenticação em todas as requisições
  * 2. Tratar erros de resposta (401 → refresh token, erros genéricos)
  *
- * Este módulo deve ser inicializado uma única vez, no boot do app.
+ * Usa o tokenRegistry para acessar o estado de auth SEM criar um ciclo
+ * circular de importação com auth.store.
  */
 
 import type { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 import { apiClient } from './client';
-
-import { useAuthStore } from '@/store/auth.store';
+import { tokenRegistry } from './token-registry';
 
 // ---------------------------------------------------------------------------
 // Request interceptor — injeta Authorization header
@@ -20,7 +20,7 @@ import { useAuthStore } from '@/store/auth.store';
 
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const { accessToken } = useAuthStore.getState();
+    const accessToken = tokenRegistry.getAccessToken();
 
     if (accessToken && config.headers) {
       config.headers.Authorization = `Bearer ${accessToken}`;
@@ -51,10 +51,10 @@ apiClient.interceptors.response.use(
       (originalRequest as InternalAxiosRequestConfig & { _retry?: boolean })._retry = true;
 
       try {
-        const { refreshToken } = useAuthStore.getState();
+        const refreshToken = tokenRegistry.getRefreshToken();
 
         if (!refreshToken) {
-          useAuthStore.getState().logout();
+          tokenRegistry.logout();
           return Promise.reject(error);
         }
 
@@ -66,8 +66,8 @@ apiClient.interceptors.response.use(
 
         const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data;
 
-        // Atualiza os tokens no store
-        useAuthStore.getState().setTokens(newAccessToken, newRefreshToken);
+        // Atualiza os tokens no store via registry
+        tokenRegistry.setTokens(newAccessToken, newRefreshToken);
 
         // Refaz a requisição original com o novo token
         if (originalRequest.headers) {
@@ -77,7 +77,7 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch {
         // Refresh falhou — força logout
-        useAuthStore.getState().logout();
+        tokenRegistry.logout();
         return Promise.reject(error);
       }
     }

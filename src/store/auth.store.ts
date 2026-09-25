@@ -12,6 +12,7 @@ import type { User } from '@/types/entities';
 import type { ApiResponse, AuthResponse, RegisterRequest } from '@/types/api';
 import { secureStorage } from '@/services/storage/secure-storage';
 import { apiPost, apiGet, Endpoints } from '@/services/api';
+import { tokenRegistry } from '@/services/api/token-registry';
 import { useFeedStore } from './feed.store';
 
 // ---------------------------------------------------------------------------
@@ -217,3 +218,14 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
     set({ hasCompletedOnboarding: true });
   },
 }));
+
+// ---------------------------------------------------------------------------
+// Liga o tokenRegistry ao auth store (resolve o ciclo de importação)
+// O interceptor usa tokenRegistry; o store registra suas funções aqui.
+// ---------------------------------------------------------------------------
+tokenRegistry.register({
+  getAccessToken: () => useAuthStore.getState().accessToken,
+  getRefreshToken: () => useAuthStore.getState().refreshToken,
+  onLogout: () => useAuthStore.getState().logout(),
+  onSetTokens: (access, refresh) => useAuthStore.getState().setTokens(access, refresh),
+});

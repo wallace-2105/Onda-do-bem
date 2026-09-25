@@ -17,9 +17,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
+import { useRouter } from 'expo-router';
 import { useAppTheme } from '@/hooks/use-theme';
 import { useThemeStore, type ThemeMode } from '@/store/theme.store';
 import { useFeedStore } from '@/store/feed.store';
+import { useAuthStore } from '@/store/auth.store';
 import { AppText } from '@/components/ui/text';
 import { Spacing, BorderRadius, FontWeight } from '@/constants/theme';
 import { Config } from '@/constants/config';
@@ -27,9 +29,12 @@ import { Config } from '@/constants/config';
 export default function SettingsScreen() {
   const theme = useAppTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
   const resetToDefaults = useFeedStore((s) => s.resetToDefaults);
+  const currentUser = useFeedStore((s) => s.currentUser);
+  const { user, accessToken, logout } = useAuthStore();
 
   const [pushLikes, setPushLikes] = useState(true);
   const [pushMutiroes, setPushMutiroes] = useState(true);
@@ -62,7 +67,14 @@ export default function SettingsScreen() {
   const handleLogout = () => {
     Alert.alert('Desconectar', 'Deseja realmente sair da sua conta?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Sair', style: 'destructive', onPress: () => {} },
+      {
+        text: 'Sair',
+        style: 'destructive',
+        onPress: async () => {
+          await logout();
+          router.replace('/login');
+        },
+      },
     ]);
   };
 
@@ -251,6 +263,56 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Conta & Autenticação */}
+        <View style={styles.section}>
+          <AppText variant="caption" weight="bold" color="secondary" style={styles.sectionHeader}>
+            CONTA & API SPRING BOOT
+          </AppText>
+          <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={styles.settingItem}>
+              <View style={styles.settingInfo}>
+                <AppText variant="body" weight="bold">
+                  {currentUser.displayName}
+                </AppText>
+                <AppText variant="caption" color="secondary">
+                  {currentUser.email || '@' + currentUser.username}
+                </AppText>
+              </View>
+              <View style={[styles.accountStatusBadge, { backgroundColor: accessToken ? '#10B98118' : '#F59E0B18' }]}>
+                <Ionicons
+                  name={accessToken ? 'shield-checkmark' : 'person'}
+                  size={14}
+                  color={accessToken ? '#10B981' : '#F59E0B'}
+                />
+                <AppText
+                  variant="caption"
+                  weight="bold"
+                  style={{ color: accessToken ? '#10B981' : '#F59E0B', marginLeft: 4 }}
+                >
+                  {accessToken ? 'JWT Ativo' : 'Local'}
+                </AppText>
+              </View>
+            </View>
+
+            <View style={[styles.divider, { backgroundColor: theme.borderLight }]} />
+
+            <Pressable
+              onPress={() => router.push('/login')}
+              style={({ pressed }) => [styles.settingItem, pressed && { opacity: 0.7 }]}
+            >
+              <View style={styles.settingInfo}>
+                <AppText variant="body" weight="medium" style={{ color: theme.primary }}>
+                  {accessToken ? 'Trocar de Conta na API 🔐' : 'Fazer Login com a API Spring Boot 🔐'}
+                </AppText>
+                <AppText variant="caption" color="secondary">
+                  Acesse com contas de teste ou crie seu perfil oficial
+                </AppText>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={theme.primary} />
+            </Pressable>
+          </View>
+        </View>
+
         {/* Botão de Sair */}
         <Pressable
           onPress={handleLogout}
@@ -326,5 +388,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: BorderRadius.lg,
     marginTop: Spacing.md,
+  },
+  accountStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
   },
 });

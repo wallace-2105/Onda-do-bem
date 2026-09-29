@@ -228,9 +228,10 @@ npx expo start
 * **Wallace Coimbra**
 * **Mateus Sepulvida**
 * **Javier Penalver**
-
+* **Nicole Henrique**
 ---
 
 ## 📋 Licença
 
 Este projeto está sob a licença [MIT](LICENSE).
+//////////

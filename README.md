@@ -225,7 +225,7 @@ npx expo start
 
 ## 👥 Desenvolvedores
 
-* **Wallace Coimbra**
+* **Wallace Coimbra santos**
 * **Mateus Sepulvida**
 * **Javier Penalver**
 

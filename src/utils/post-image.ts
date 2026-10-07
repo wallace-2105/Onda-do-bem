@@ -6,6 +6,13 @@
  */
 
 export function getPostImageSource(post: { id?: string; imageUrl?: string | null }) {
+  if (
+    post.id === 'post-resgate-peixe' ||
+    post.imageUrl === 'asset:resgate-peixe' ||
+    post.imageUrl?.includes('resgate-peixe')
+  ) {
+    return require('@/../assets/images/resgate-peixe.webp');
+  }
   if (post.id === 'post-3' || post.imageUrl === 'asset:eight-puppies') {
     return require('@/../assets/images/eight-puppies.jpg');
   }

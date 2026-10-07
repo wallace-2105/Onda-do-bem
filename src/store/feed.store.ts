@@ -305,7 +305,7 @@ export const useFeedStore = create<FeedState>()(
           return {
             ...currentState,
             ...persistedState,
-            posts: [...persistedState.posts, ...missingInitialPosts],
+            posts: [...missingInitialPosts, ...persistedState.posts],
           };
         }
         return {

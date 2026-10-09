@@ -17,7 +17,9 @@ interface PostRepository : JpaRepository<PostEntity, UUID> {
         """
         SELECT p FROM PostEntity p
         WHERE (:category IS NULL OR p.category = :category)
-        AND (:search IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%')))
+        AND (:search IS NULL
+            OR LOWER(p.title) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+            OR LOWER(p.description) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
         ORDER BY p.createdAt DESC
         """
     )

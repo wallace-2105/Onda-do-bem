@@ -1,27 +1,8 @@
 spring:
   application:
     name: ondadobem-api
-
-  datasource:
-    # Banco H2 em arquivo para persistir logins e usuários no disco local (ou PostgreSQL se configurado)
-    url: ${DATABASE_URL:jdbc:h2:file:./data/ondadobemdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
-    driver-class-name: ${DATABASE_DRIVER:org.h2.Driver}
-    username: ${DATABASE_USERNAME:sa}
-    password: ${DATABASE_PASSWORD:}
-
-  jpa:
-    database-platform: ${DATABASE_DIALECT:org.hibernate.dialect.H2Dialect}
-    hibernate:
-      ddl-auto: update
-    show-sql: false
-    properties:
-      hibernate:
-        format_sql: true
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+  profiles:
+    active: supabase
 
 server:
   port: 8080
@@ -34,3 +15,61 @@ app:
     access-token-expiration-ms: 86400000
     # 7 dias em milissegundos
     refresh-token-expiration-ms: 604800000
+
+---
+# ==========================================
+# PERFIL LOCAL (H2 Database em arquivo)
+# ==========================================
+spring:
+  config:
+    activate:
+      on-profile: local
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:h2:file:./data/ondadobemdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+---
+# ==========================================
+# PERFIL SUPABASE / POSTGRESQL (Nuvem compartilhada)
+# ==========================================
+spring:
+  config:
+    activate:
+      on-profile: supabase
+
+  datasource:
+    # Supabase Session Pooler IPv4 (porta 5432)
+    url: ${SUPABASE_DB_URL:${DATABASE_URL:jdbc:postgresql://aws-1-sa-east-1.pooler.supabase.com:5432/postgres?sslmode=require}}
+    driver-class-name: org.postgresql.Driver
+    username: ${SUPABASE_DB_USER:${DATABASE_USERNAME:postgres.fljmkiiffvkdciysweme}}
+    password: ${SUPABASE_DB_PASSWORD:123ondadobem}
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  h2:
+    console:
+      enabled: false

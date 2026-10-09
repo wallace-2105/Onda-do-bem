@@ -1,4 +1,4 @@
-@# 🌊 Onda do Bem
+# 🌊 Onda do Bem
 
 Plataforma social e comunitária voltada para o registro, georreferenciamento e engajamento em ações sustentáveis e de impacto positivo ao meio ambiente e à sociedade.
 

@@ -1,4 +1,4 @@
-# 🌊 Onda do Bem
+﻿# 🌊 Onda do Bem
 
 Plataforma social e comunitária voltada para o registro, georreferenciamento e engajamento em ações sustentáveis e de impacto positivo ao meio ambiente e à sociedade.
 
@@ -34,28 +34,46 @@ O **Onda do Bem** conecta voluntários e cidadãos conscientes em uma rede ativa
   * Sistema de engajamento social com curtidas e comentários utilizando atualizações otimistas na UI.
   * Pontuação de impacto ambiental e sistema de níveis/ranking ecológico (Semente, Broto, Guardião, Embaixador, etc.).
 
+* 🔔 **Sistema de Notificações em Tempo Real:**
+  * Notificações discretas de curtidas, comentários e marcos de conquista ecológica.
+  * **Toast animado** exibido no topo da tela ao receber uma nova interação (curtida, comentário).
+  * Ícone de sininho com **animação de shake** e badge com contador de não lidas.
+  * Painel de notificações com histórico de interações e leitura individual ou em massa.
+  * Tipos suportados: `LIKE`, `COMMENT`, `IMPACT_MILESTONE`.
+
 * 🎨 **Experiência Visual & Design System:**
   * Design moderno com suporte nativo a **Modo Claro (Light)** e **Modo Escuro (Dark)**.
   * Microinterações, feedback tátil, modais fluidos e tratamento de layout responsivo com safe area.
+  * Efeitos de vidro (*glassmorphism*) via **`expo-glass-effect`**.
+  * Design System com componentes reutilizáveis: `Avatar`, `Badge`, `Button`, `Card`, `Input`, `Loading`, `Text`.
+
+* 🗄️ **Backend com Supabase (PostgreSQL em Nuvem):**
+  * Perfil padrão (`supabase`) conecta a instância PostgreSQL gerenciada no Supabase (pool de conexões na região `sa-east-1`).
+  * Perfil alternativo `local` utiliza H2 em modo de **arquivo** (`jdbc:h2:file:./data/ondadobemdb`) para persistência entre reinicializações em desenvolvimento.
+  * Troca de perfil via propriedade `spring.profiles.active` no `application.yml`.
 
 ---
 
 ## 🛠 Tech Stack
 
 ### Mobile (Frontend)
-| Tecnologia | Propósito |
-|:---|:---|
-| **React Native** | Framework mobile multiplataforma |
-| **Expo (SDK 52+)** | Toolchain, runtime, módulos nativos e build |
-| **TypeScript (strict)** | Tipagem estática e segurança de código |
-| **Expo Router** | Navegação baseada em arquivos (*file-based routing*) |
-| **Zustand + AsyncStorage** | Gerenciamento de estado global e persistência local |
-| **Expo SecureStore** | Armazenamento seguro e encriptado de tokens JWT no dispositivo |
-| **React Native WebView** | Renderização do mapa interativo geográfico com Leaflet/OpenStreetMap |
-| **Expo Image & ImagePicker** | Carregamento otimizado de imagens e captura via câmera/galeria |
-| **TanStack Query** | Cache e sincronização de estado remoto |
-| **Axios + Interceptors** | Cliente HTTP com suporte a Bearer JWT, refresh automático e token registry |
-| **React Hook Form + Zod** | Gestão de formulários e validação de schema |
+| Tecnologia | Versão | Propósito |
+|:---|:---|:---|
+| **React Native** | 0.86.3 | Framework mobile multiplataforma |
+| **Expo (SDK 57)** | ~57.x | Toolchain, runtime, módulos nativos e build |
+| **TypeScript (strict)** | ~6.0.3 | Tipagem estática e segurança de código |
+| **React** | 19.2.3 | Biblioteca de UI |
+| **Expo Router** | ~57.x | Navegação baseada em arquivos (*file-based routing*) |
+| **Zustand** | ^5.0 | Gerenciamento de estado global |
+| **AsyncStorage** | 2.2.0 | Persistência local de dados |
+| **Expo SecureStore** | ~57.x | Armazenamento seguro e encriptado de tokens JWT |
+| **React Native WebView** | 13.16.1 | Renderização do mapa interativo (Leaflet/OpenStreetMap) |
+| **Expo Image & ImagePicker** | ~57.x | Carregamento otimizado e captura via câmera/galeria |
+| **Expo Glass Effect** | ~57.x | Efeitos glassmorphism nativos |
+| **React Native Reanimated** | 4.5.1 | Animações de alta performance (toast, shake, etc.) |
+| **TanStack Query** | ^5.102 | Cache e sincronização de estado remoto |
+| **Axios + Interceptors** | ^1.20 | Cliente HTTP com Bearer JWT, refresh automático e token registry |
+| **React Hook Form + Zod** | ^7.86 / ^4.4 | Gestão de formulários e validação de schema |
 
 ### Backend (API RESTful)
 | Tecnologia | Propósito |
@@ -64,8 +82,8 @@ O **Onda do Bem** conecta voluntários e cidadãos conscientes em uma rede ativa
 | **Spring Boot 3** | Framework backend (Web, Data JPA, Security, Validation) |
 | **Java 21 LTS** | Runtime de alto desempenho |
 | **Spring Security + JJWT** | Autenticação stateless via tokens JWT (Access & Refresh) |
-| **H2 Database** | Banco de dados relacional em memória para desenvolvimento ágil |
-| **PostgreSQL** | Banco relacional pronto para ambientes de homologação e produção |
+| **Supabase (PostgreSQL)** | Banco de dados relacional em nuvem — perfil padrão (`supabase`) |
+| **H2 Database (arquivo)** | Banco relacional em arquivo local — perfil de desenvolvimento (`local`) |
 | **Gradle (Kotlin DSL)** | Automação de compilação e gestão de dependências |
 
 ---
@@ -83,14 +101,15 @@ Onda-do-bem/
 │   │       ├── dto/                 # DTOs de Request e Response
 │   │       ├── exception/           # Tratamento global de erros e exceções HTTP
 │   │       └── service/             # Regras de negócio e autenticação
-│   ├── src/main/resources/          # application.yml e configurações de banco
+│   ├── src/main/resources/
+│   │   └── application.yml          # Perfis: supabase (padrão) e local (H2 arquivo)
 │   └── build.gradle.kts             # Dependências e plugins Gradle
 │
 ├── src/                             # Aplicativo Mobile em React Native (Expo)
 │   ├── app/                         # Expo Router — Telas e navegação
 │   │   ├── (tabs)/                  # Barra de navegação inferior (Tabs)
 │   │   │   ├── _layout.tsx          # Configuração visual das abas
-│   │   │   ├── index.tsx            # Feed social de ações ecológicas
+│   │   │   ├── index.tsx            # Feed social + sistema de notificações integrado
 │   │   │   ├── map.tsx              # Mapa interativo com criação de ações via Pin
 │   │   │   ├── create.tsx           # Formulário dedicado para criação de publicações
 │   │   │   ├── profile.tsx          # Perfil do voluntário, conquistas e ranking
@@ -98,15 +117,33 @@ Onda-do-bem/
 │   │   ├── login.tsx                # Tela de Autenticação (Login e Cadastro com JWT)
 │   │   ├── _layout.tsx              # Root Layout, Providers e inicialização de sessão
 │   │   └── +not-found.tsx           # Tratamento de rotas inexistentes
-│   ├── components/                  # Componentes de UI reutilizáveis e cards de feed
+│   ├── components/                  # Componentes de UI reutilizáveis
+│   │   ├── common/                  # Componentes compartilhados entre telas
+│   │   ├── feed/                    # Cards e itens do feed social
+│   │   ├── navigation/              # Componentes de navegação
+│   │   └── ui/                      # Design System: Avatar, Badge, Button, Card, Input, Loading, Text
 │   ├── constants/                   # Configurações globais, tema e dados mock de fallback
 │   ├── features/                    # Módulos organizados por domínio de negócio
+│   │   ├── auth/                    # Lógica de autenticação
+│   │   ├── feed/                    # Lógica do feed social
+│   │   ├── impact/                  # Métricas e pontuação de impacto
+│   │   ├── notifications/           # Lógica de notificações
+│   │   ├── post/                    # Criação e gestão de publicações
+│   │   └── profile/                 # Perfil e conquistas do usuário
 │   ├── hooks/                       # Custom hooks (tema, autenticação, etc.)
 │   ├── providers/                   # Provedores de contexto (AppProviders)
-│   ├── services/                    # Integração com API REST e storage
+│   ├── services/                    # Integração com API REST e serviços nativos
+│   │   ├── analytics/               # Rastreamento de eventos e analytics
 │   │   ├── api/                     # Cliente Axios, interceptors e token-registry
+│   │   ├── geolocation/             # Serviço de geolocalização do dispositivo
+│   │   ├── image/                   # Processamento e upload de imagens
+│   │   ├── notifications/           # Serviço de push notifications (Expo)
 │   │   └── storage/                 # AsyncStorage e SecureStore
-│   ├── store/                       # Stores globais Zustand (Auth, Feed, Theme)
+│   ├── store/                       # Stores globais Zustand
+│   │   ├── auth.store.ts            # Autenticação, tokens e sessão do usuário
+│   │   ├── feed.store.ts            # Estado do feed e ações otimistas
+│   │   ├── notification.store.ts    # Notificações, toast e badge de não lidas
+│   │   └── theme.store.ts           # Modo claro/escuro
 │   ├── types/                       # Interfaces TypeScript (Entidades e API)
 │   └── utils/                       # Utilitários de data, rank e resolução de imagens
 │
@@ -141,9 +178,21 @@ cd backend
 ./gradlew bootRun
 ```
 
+Por padrão o backend sobe com o perfil **`supabase`** (PostgreSQL na nuvem — não requer configuração adicional).
+
+Para usar o banco local H2 (arquivo), defina o perfil:
+
+```powershell
+# Windows
+$env:SPRING_PROFILES_ACTIVE="local"; .\gradlew.bat bootRun
+
+# Linux / macOS
+SPRING_PROFILES_ACTIVE=local ./gradlew bootRun
+```
+
 * **API REST:** `http://localhost:8080/api`
-* **Console do Banco H2:** `http://localhost:8080/h2-console`
-  * **JDBC URL:** `jdbc:h2:mem:ondadobemdb`
+* **Console do Banco H2** *(somente perfil `local`):* `http://localhost:8080/h2-console`
+  * **JDBC URL:** `jdbc:h2:file:./data/ondadobemdb`
   * **User Name:** `sa`
   * **Password:** *(deixe em branco)*
 
@@ -211,15 +260,23 @@ npx expo start
    * Preencha o título, categoria, horários de início e término (`startDate`/`endDate`), selecione uma foto e confirme a publicação.
    * A nova ação será adicionada ao mapa e exibida imediatamente na aba **Feed**.
 
+3. **Testando o Sistema de Notificações:**
+   * Na aba **Feed**, curta qualquer publicação.
+   * Um **toast animado** aparecerá no topo da tela informando quem curtiu e os pontos de impacto ganhos.
+   * O ícone de sininho (🔔) na barra superior exibirá uma **animação de shake** e o badge com o número de notificações não lidas será atualizado.
+   * Toque no sininho para abrir o painel de notificações com o histórico completo (curtidas, comentários e conquistas ecológicas).
+
 ---
 
 ## 🏗 Arquitetura do Sistema
 
 * **Separação Frontend/Backend:** O app mobile se comunica com a API Kotlin / Spring Boot via REST com autenticação Bearer Token JWT.
+* **Banco de Dados em Nuvem (Supabase):** O perfil padrão do backend conecta ao PostgreSQL gerenciado pelo Supabase, com suporte a pool de conexões e SSL. O perfil `local` usa H2 em modo arquivo para desenvolvimento offline.
 * **Resiliência e Cache Híbrido:** O frontend utiliza atualizações otimistas no Zustand combinadas com persistência local no AsyncStorage, garantindo que o usuário visualize dados mesmo se a conexão estiver instável.
 * **Token Registry Pattern:** Arquitetura desacoplada onde o store de autenticação registra manipuladores de token (`tokenRegistry`), evitando dependências circulares entre a camada de rede (Axios interceptors) e os stores globais de estado.
 * **Persistência Segura:** Tokens sensíveis (Access e Refresh Token) são salvos de forma encriptada usando `expo-secure-store`.
 * **Feature-First:** Organização modular por domínio de negócio (`auth`, `feed`, `impact`, `post`, `profile`, `notifications`).
+* **Notification Store:** Store dedicado (`notification.store.ts`) que gerencia toasts em tempo real, badge de não lidas, animação do sininho e histórico de notificações, desacoplado do feed store.
 
 ---
 
@@ -234,4 +291,3 @@ npx expo start
 ## 📋 Licença
 
 Este projeto está sob a licença [MIT](LICENSE).
-

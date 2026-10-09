@@ -62,6 +62,8 @@ export interface User {
   totalImpact: number;
   rank?: number;
   rankTitle?: string;
+  lastLoginAt?: string | null;
+  loginCount?: number;
   createdAt: string;
   updatedAt: string;
 }

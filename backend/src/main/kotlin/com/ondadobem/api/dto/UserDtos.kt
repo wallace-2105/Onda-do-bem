@@ -15,6 +15,8 @@ data class UserResponse(
     val totalImpact: Int,
     val rank: Int?,
     val rankTitle: String?,
+    val lastLoginAt: String? = null,
+    val loginCount: Int? = 0,
     val createdAt: String,
     val updatedAt: String
 ) {
@@ -32,6 +34,8 @@ data class UserResponse(
                 totalImpact = entity.totalImpact,
                 rank = entity.userRank,
                 rankTitle = entity.rankTitle,
+                lastLoginAt = entity.lastLoginAt?.toString(),
+                loginCount = entity.loginCount,
                 createdAt = entity.createdAt.toString(),
                 updatedAt = entity.updatedAt.toString()
             )

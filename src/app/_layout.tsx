@@ -17,7 +17,7 @@ import {
   Text,
 } from 'react-native';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
-import { Slot } from 'expo-router';
+import { Slot, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'expo-image';
@@ -31,11 +31,15 @@ import { Colors } from '@/constants/theme';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const router = useRouter();
   const systemColorScheme = useColorScheme();
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
   const themeMode = useThemeStore((s) => s.mode);
   const initializeAuth = useAuthStore((s) => s.initialize);
   const isAuthInitialized = useAuthStore((s) => s.isInitialized);
+  const user = useAuthStore((s) => s.user);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const hasChosenGuestMode = useAuthStore((s) => s.hasChosenGuestMode);
 
   // Estados para a tela de abertura animada com a marca
   const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
@@ -47,6 +51,16 @@ export default function RootLayout() {
   useEffect(() => {
     initializeAuth();
   }, [initializeAuth]);
+
+  // Se o usuário não está autenticado e não optou por continuar como convidado,
+  // navega para a tela inicial de login assim que a splash screen terminar
+  useEffect(() => {
+    if (!showAnimatedSplash && isAuthInitialized) {
+      if (!user && !accessToken && !hasChosenGuestMode) {
+        router.replace('/login');
+      }
+    }
+  }, [showAnimatedSplash, isAuthInitialized, user, accessToken, hasChosenGuestMode, router]);
 
   // Sync system color scheme changes when mode is 'system'
   useEffect(() => {

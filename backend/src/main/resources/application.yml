@@ -3,8 +3,8 @@ spring:
     name: ondadobem-api
 
   datasource:
-    # Por padrão roda com H2 em memória se nenhuma URL do PostgreSQL for informada
-    url: ${DATABASE_URL:jdbc:h2:mem:ondadobemdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    # Banco H2 em arquivo para persistir logins e usuários no disco local (ou PostgreSQL se configurado)
+    url: ${DATABASE_URL:jdbc:h2:file:./data/ondadobemdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
     driver-class-name: ${DATABASE_DRIVER:org.h2.Driver}
     username: ${DATABASE_USERNAME:sa}
     password: ${DATABASE_PASSWORD:}

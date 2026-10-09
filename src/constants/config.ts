@@ -19,11 +19,11 @@ import { Platform } from 'react-native';
  *
  * Para celular físico, defina EXPO_PUBLIC_API_URL no .env.local com seu IP.
  */
-function getDefaultApiUrl(): string {
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:8080/api';
+function getApiUrl(): string {
+  if (Platform.OS === 'web') {
+    return 'http://localhost:8080/api';
   }
-  return 'http://localhost:8080/api';
+  return process.env.EXPO_PUBLIC_API_URL || (Platform.OS === 'android' ? 'http://10.0.2.2:8080/api' : 'http://localhost:8080/api');
 }
 
 export const Config = {
@@ -35,9 +35,9 @@ export const Config = {
 
   /**
    * URL base da API REST Spring Boot.
-   * Prioridade: variável de ambiente → detecção automática por plataforma.
+   * Prioridade: Web -> localhost; Mobile -> EXPO_PUBLIC_API_URL ou detecção automática.
    */
-  apiBaseUrl: process.env.EXPO_PUBLIC_API_URL ?? getDefaultApiUrl(),
+  apiBaseUrl: getApiUrl(),
 
   /** Timeout padrão para requisições HTTP (em ms) */
   apiTimeout: 15_000,

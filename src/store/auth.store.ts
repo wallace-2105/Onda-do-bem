@@ -30,6 +30,8 @@ interface AuthState {
   isInitialized: boolean;
   /** Se o onboarding já foi completado */
   hasCompletedOnboarding: boolean;
+  /** Se o usuário optou por navegar como convidado temporariamente */
+  hasChosenGuestMode: boolean;
   /** Se está executando login/cadastro */
   isLoading: boolean;
 }
@@ -51,6 +53,8 @@ interface AuthActions {
   logout: () => Promise<void>;
   /** Marca onboarding como completo */
   completeOnboarding: () => Promise<void>;
+  /** Define navegação como convidado */
+  setGuestMode: (val: boolean) => void;
 }
 
 export type AuthStore = AuthState & AuthActions;
@@ -75,6 +79,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
   refreshToken: null,
   isInitialized: false,
   hasCompletedOnboarding: false,
+  hasChosenGuestMode: false,
   isLoading: false,
 
   // Actions
@@ -82,15 +87,27 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
     try {
       const { accessToken, refreshToken } = await secureStorage.getTokens();
       const hasCompletedOnboarding = await secureStorage.hasCompletedOnboarding();
+      const cachedUser = await secureStorage.getUser<User>();
 
       if (accessToken) {
-        set({ accessToken, refreshToken, hasCompletedOnboarding });
-        // Tenta buscar os dados do usuário autenticado no backend
+        set({
+          accessToken,
+          refreshToken,
+          hasCompletedOnboarding,
+          user: cachedUser ?? null,
+        });
+
+        if (cachedUser) {
+          useFeedStore.setState({ currentUser: cachedUser });
+        }
+
+        // Sincroniza com a API REST
         try {
           const res = await apiGet<ApiResponse<User>>(Endpoints.auth.me);
           const userData = (res as any)?.data || res;
           if (userData && userData.id) {
             set({ user: userData, isInitialized: true });
+            await secureStorage.saveUser(userData);
             useFeedStore.setState({ currentUser: userData });
             return;
           }
@@ -100,6 +117,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
       }
 
       set({
+        user: cachedUser ?? null,
         accessToken,
         refreshToken,
         hasCompletedOnboarding,
@@ -126,6 +144,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
       }
 
       await secureStorage.saveTokens(accessToken, refreshToken);
+      await secureStorage.saveUser(user);
 
       set({
         user,
@@ -162,6 +181,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
       }
 
       await secureStorage.saveTokens(accessToken, refreshToken);
+      await secureStorage.saveUser(user);
 
       set({
         user,
@@ -181,6 +201,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
 
   setAuth: async (user, accessToken, refreshToken) => {
     await secureStorage.saveTokens(accessToken, refreshToken);
+    await secureStorage.saveUser(user);
     set({ user, accessToken, refreshToken });
     useFeedStore.setState({ currentUser: user });
   },
@@ -195,6 +216,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
     if (user) {
       const updatedUser = { ...user, ...partial };
       set({ user: updatedUser });
+      secureStorage.saveUser(updatedUser).catch(() => {});
       useFeedStore.setState({ currentUser: updatedUser });
     }
   },
@@ -205,10 +227,12 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
       apiPost(Endpoints.auth.logout).catch(() => {});
     } finally {
       await secureStorage.clearTokens();
+      await secureStorage.clearUser();
       set({
         user: null,
         accessToken: null,
         refreshToken: null,
+        hasChosenGuestMode: false,
       });
     }
   },
@@ -216,6 +240,10 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
   completeOnboarding: async () => {
     await secureStorage.setOnboardingCompleted();
     set({ hasCompletedOnboarding: true });
+  },
+
+  setGuestMode: (val: boolean) => {
+    set({ hasChosenGuestMode: val });
   },
 }));
 

@@ -38,6 +38,10 @@ class UserEntity(
 
     var rankTitle: String? = "Protetor da Natureza",
 
+    var lastLoginAt: Instant? = null,
+
+    var loginCount: Int = 0,
+
     @Column(nullable = false, updatable = false)
     val createdAt: Instant = Instant.now(),
 

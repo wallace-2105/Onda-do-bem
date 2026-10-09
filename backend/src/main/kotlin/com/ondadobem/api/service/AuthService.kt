@@ -2,21 +2,27 @@ package com.ondadobem.api.service
 
 import com.ondadobem.api.config.JwtService
 import com.ondadobem.api.domain.entity.UserEntity
+import com.ondadobem.api.domain.entity.UserSessionEntity
 import com.ondadobem.api.domain.repository.UserRepository
+import com.ondadobem.api.domain.repository.UserSessionRepository
 import com.ondadobem.api.dto.*
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.server.ResponseStatusException
+import java.time.Instant
 import java.util.UUID
 
 @Service
 class AuthService(
     private val userRepository: UserRepository,
+    private val userSessionRepository: UserSessionRepository,
     private val passwordEncoder: PasswordEncoder,
     private val jwtService: JwtService
 ) {
+    private val logger = LoggerFactory.getLogger(AuthService::class.java)
 
     @Transactional
     fun register(request: RegisterRequest): AuthResponse {
@@ -35,10 +41,24 @@ class AuthService(
             email = normalizedEmail,
             username = normalizedUsername,
             displayName = request.displayName.trim(),
-            passwordHash = passwordEncoder.encode(request.password)!!
+            passwordHash = passwordEncoder.encode(request.password)!!,
+            lastLoginAt = Instant.now(),
+            loginCount = 1
         )
 
         val savedUser = userRepository.save(newUser)
+
+        // Salva a sessão no banco de dados
+        userSessionRepository.save(
+            UserSessionEntity(
+                user = savedUser,
+                loginAt = Instant.now(),
+                status = "ACTIVE",
+                clientInfo = "Mobile Expo App"
+            )
+        )
+
+        logger.info("Novo usuário registrado e sessão salva no banco de dados: ${savedUser.email} (ID: ${savedUser.id})")
 
         val accessToken = jwtService.generateAccessToken(savedUser.id, savedUser.email)
         val refreshToken = jwtService.generateRefreshToken(savedUser.id, savedUser.email)
@@ -50,7 +70,7 @@ class AuthService(
         )
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     fun login(request: LoginRequest): AuthResponse {
         val normalizedEmail = request.email.trim().lowercase()
 
@@ -61,14 +81,45 @@ class AuthService(
             throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "E-mail ou senha incorretos")
         }
 
-        val accessToken = jwtService.generateAccessToken(user.id, user.email)
-        val refreshToken = jwtService.generateRefreshToken(user.id, user.email)
+        // 💾 Persiste o login no banco de dados: atualiza data/hora e contador
+        user.lastLoginAt = Instant.now()
+        user.loginCount += 1
+        val updatedUser = userRepository.save(user)
+
+        // 💾 Salva o registro da nova sessão no banco de dados
+        userSessionRepository.save(
+            UserSessionEntity(
+                user = updatedUser,
+                loginAt = Instant.now(),
+                status = "ACTIVE",
+                clientInfo = "Mobile Expo App"
+            )
+        )
+
+        logger.info("Login realizado e salvo no banco de dados com sucesso para: ${updatedUser.email} (Total de logins: ${updatedUser.loginCount})")
+
+        val accessToken = jwtService.generateAccessToken(updatedUser.id, updatedUser.email)
+        val refreshToken = jwtService.generateRefreshToken(updatedUser.id, updatedUser.email)
 
         return AuthResponse(
             accessToken = accessToken,
             refreshToken = refreshToken,
-            user = UserResponse.fromEntity(user)
+            user = UserResponse.fromEntity(updatedUser)
         )
+    }
+
+    @Transactional
+    fun logout(userId: UUID?) {
+        if (userId != null) {
+            val sessions = userSessionRepository.findByUserIdOrderByLoginAtDesc(userId)
+            val activeSession = sessions.firstOrNull { it.status == "ACTIVE" }
+            if (activeSession != null) {
+                activeSession.status = "LOGGED_OUT"
+                activeSession.logoutAt = Instant.now()
+                userSessionRepository.save(activeSession)
+                logger.info("Sessão finalizada no banco de dados para o usuário $userId")
+            }
+        }
     }
 
     @Transactional(readOnly = true)

@@ -46,7 +46,8 @@ class AuthController(
     }
 
     @PostMapping("/logout")
-    fun logout(): ResponseEntity<ApiResponse<Map<String, String>>> {
+    fun logout(@AuthenticationPrincipal principal: UserPrincipal?): ResponseEntity<ApiResponse<Map<String, String>>> {
+        authService.logout(principal?.id)
         return ResponseEntity.ok(
             ApiResponse(data = mapOf("status" to "logged_out"), message = "Logout efetuado com sucesso")
         )

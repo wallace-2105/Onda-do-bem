@@ -63,8 +63,12 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
+  const currentUser = useAuthStore((s) => s.user);
   const login = useAuthStore((s) => s.login);
   const register = useAuthStore((s) => s.register);
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const setGuestMode = useAuthStore((s) => s.setGuestMode);
+  const logout = useAuthStore((s) => s.logout);
   const isLoading = useAuthStore((s) => s.isLoading);
 
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -95,18 +99,82 @@ export default function LoginScreen() {
 
     try {
       const user = await login(targetEmail, targetPass);
-      Alert.alert('Bem-vindo de volta! 🌊', `Login efetuado com sucesso como ${user.displayName}.`, [
-        {
-          text: 'Continuar',
-          onPress: () => router.replace('/(tabs)'),
-        },
-      ]);
+      Alert.alert(
+        'Login efetuado com sucesso! 🌊💾',
+        `Bem-vindo(a) de volta, ${user.displayName}!\nSeu acesso foi registrado e salvo com sucesso no banco de dados.`,
+        [
+          {
+            text: 'Entrar no Aplicativo',
+            onPress: () => router.replace('/(tabs)'),
+          },
+        ]
+      );
     } catch (err: any) {
+      const isNetworkError =
+        err?.message?.includes('Network Error') ||
+        err?.code === 'ECONNREFUSED' ||
+        err?.message?.includes('timeout') ||
+        err?.code === 'ERR_NETWORK';
+
+      if (isNetworkError) {
+        // Encontra se é uma das contas de demonstração cadastradas
+        const matchedDemo = DEMO_ACCOUNTS.find(
+          (a) => a.email.toLowerCase() === targetEmail.toLowerCase()
+        );
+        const demoUser: any = {
+          id: matchedDemo
+            ? matchedDemo.email.includes('lucas')
+              ? 'u1'
+              : matchedDemo.email.includes('marina')
+              ? 'u2'
+              : 'u3'
+            : 'local-user-' + Date.now(),
+          email: targetEmail,
+          username: targetEmail.split('@')[0],
+          displayName: matchedDemo ? matchedDemo.name : targetEmail.split('@')[0],
+          avatarUrl: matchedDemo?.email.includes('lucas')
+            ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop'
+            : matchedDemo?.email.includes('marina')
+            ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop'
+            : 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&auto=format&fit=crop',
+          bio: 'Protetor ambiental e comunitário 🌊',
+          location: 'Brasil',
+          totalActions: 16,
+          totalImpact: 420,
+          rank: 4,
+          rankTitle: 'Guardião da Terra',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString(),
+          loginCount: 1,
+        };
+
+        Alert.alert(
+          'API Spring Boot Não Respondendo ⚠️',
+          `Não foi possível conectar ao servidor em ${Config.apiBaseUrl}.\n\nDeseja realizar o login em Modo Local com persistência segura no banco do dispositivo (SecureStore / AsyncStorage)?`,
+          [
+            {
+              text: 'Cancelar',
+              style: 'cancel',
+            },
+            {
+              text: 'Entrar e Salvar no Banco Local 💾',
+              onPress: async () => {
+                await setAuth(demoUser, 'local-token-' + Date.now(), 'local-refresh-token');
+                router.replace('/(tabs)');
+              },
+            },
+          ]
+        );
+        setErrorMessage(
+          `API inacessível em ${Config.apiBaseUrl}. Para conectar ao Spring Boot execute: .\\gradlew.bat bootRun na pasta backend.`
+        );
+        return;
+      }
+
       let msg = 'Falha ao autenticar. Verifique suas credenciais.';
       if (err?.response?.data?.message) {
         msg = err.response.data.message;
-      } else if (err?.message?.includes('Network Error') || err?.code === 'ECONNREFUSED') {
-        msg = `Não foi possível conectar à API em ${Config.apiBaseUrl}. Certifique-se de que o backend está rodando no computador (.\\gradlew.bat bootRun).`;
       }
       setErrorMessage(msg);
     }
@@ -141,18 +209,62 @@ export default function LoginScreen() {
         password,
       });
 
-      Alert.alert('Conta Criada com Sucesso! 🌱', `Seja bem-vindo ao Onda do Bem, ${user.displayName}!`, [
-        {
-          text: 'Acessar o App',
-          onPress: () => router.replace('/(tabs)'),
-        },
-      ]);
+      Alert.alert(
+        'Conta Criada com Sucesso! 🌱💾',
+        `Seja bem-vindo(a) ao Onda do Bem, ${user.displayName}!\nSeu cadastro foi salvo com sucesso no banco de dados.`,
+        [
+          {
+            text: 'Acessar o Aplicativo',
+            onPress: () => router.replace('/(tabs)'),
+          },
+        ]
+      );
     } catch (err: any) {
+      const isNetworkError =
+        err?.message?.includes('Network Error') ||
+        err?.code === 'ECONNREFUSED' ||
+        err?.message?.includes('timeout') ||
+        err?.code === 'ERR_NETWORK';
+
+      if (isNetworkError) {
+        const newUser: any = {
+          id: 'user-' + Date.now(),
+          email: email.trim().toLowerCase(),
+          username: username.trim().toLowerCase(),
+          displayName: displayName.trim(),
+          avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop',
+          bio: 'Novo membro da rede de impacto Onda do Bem 🌱',
+          location: 'Brasil',
+          totalActions: 0,
+          totalImpact: 0,
+          rank: 1,
+          rankTitle: 'Protetor da Natureza',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString(),
+          loginCount: 1,
+        };
+
+        Alert.alert(
+          'API Offline — Modo Local 💾',
+          'A API Spring Boot não está ativa. Deseja criar o usuário e salvar seus dados no banco local seguro?',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+              text: 'Criar e Salvar no Banco Local',
+              onPress: async () => {
+                await setAuth(newUser, 'local-token-' + Date.now(), 'local-refresh-token');
+                router.replace('/(tabs)');
+              },
+            },
+          ]
+        );
+        return;
+      }
+
       let msg = 'Erro ao criar conta.';
       if (err?.response?.data?.message) {
         msg = err.response.data.message;
-      } else if (err?.message?.includes('Network Error')) {
-        msg = 'O servidor da API parece estar inacessível no momento.';
       }
       setErrorMessage(msg);
     }
@@ -195,17 +307,72 @@ export default function LoginScreen() {
             Rede de impacto ecológico e comunitário
           </AppText>
 
-          {/* Badge de Conexão com a API */}
+          {/* Badge de Conexão com a API e Banco */}
           <View style={[styles.apiBadge, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
             <View style={styles.apiStatusDot} />
             <AppText variant="caption" color="secondary">
-              API REST: <AppText variant="caption" weight="bold">{Config.apiBaseUrl}</AppText>
+              API & DB: <AppText variant="caption" weight="bold">{Config.apiBaseUrl}</AppText>
             </AppText>
           </View>
         </View>
 
+        {/* Banner de Sessão Ativa (se usuário já estiver conectado) */}
+        {currentUser && (
+          <View
+            style={[
+              styles.activeSessionBanner,
+              { backgroundColor: theme.surface, borderColor: '#10B98160' },
+            ]}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={[styles.activeDot, { backgroundColor: '#10B981' }]} />
+              <AppText variant="bodySm" weight="bold" style={{ color: theme.text, marginLeft: 6 }}>
+                Sessão Ativa no Banco de Dados 💾
+              </AppText>
+            </View>
+            <AppText variant="caption" color="secondary" style={{ marginTop: 4 }}>
+              Usuário conectado: <AppText variant="caption" weight="bold">{currentUser.displayName}</AppText> ({currentUser.email})
+            </AppText>
+            {currentUser.rankTitle && (
+              <AppText variant="caption" style={{ color: theme.primary, marginTop: 2, fontWeight: FontWeight.semibold }}>
+                Rank: {currentUser.rankTitle}
+              </AppText>
+            )}
+            <View style={styles.activeSessionActions}>
+              <Pressable
+                style={[styles.smallBtn, { backgroundColor: theme.primary }]}
+                onPress={() => router.replace('/(tabs)')}
+              >
+                <AppText variant="caption" weight="bold" style={{ color: '#FFFFFF' }}>
+                  Acessar Feed ➜
+                </AppText>
+              </Pressable>
+              <Pressable
+                style={[styles.smallBtnOutline, { borderColor: theme.border }]}
+                onPress={async () => {
+                  await logout();
+                  setEmail('');
+                  setPassword('');
+                }}
+              >
+                <AppText variant="caption" weight="semibold" color="secondary">
+                  Desconectar
+                </AppText>
+              </Pressable>
+            </View>
+          </View>
+        )}
+
         {/* Card Principal de Autenticação */}
         <View style={[styles.authCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          {/* Badge informativo de persistência */}
+          <View style={[styles.dbBadge, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+            <Ionicons name="server-outline" size={14} color={theme.primary} />
+            <AppText variant="caption" color="secondary" style={{ marginLeft: 6, flex: 1 }}>
+              Ao fazer o login, seus dados são salvos no banco de dados.
+            </AppText>
+          </View>
+
           {/* Seletor de Modo: Entrar vs Criar Conta */}
           <View style={[styles.modeSelector, { backgroundColor: theme.surfaceElevated }]}>
             <Pressable
@@ -383,11 +550,14 @@ export default function LoginScreen() {
 
         {/* Atalho para continuar como Convidado */}
         <Pressable
-          onPress={() => router.replace('/(tabs)')}
+          onPress={() => {
+            setGuestMode(true);
+            router.replace('/(tabs)');
+          }}
           style={styles.guestLink}
         >
           <AppText variant="bodySm" color="secondary" weight="semibold">
-            Continuar sem login (Modo Offline / Convidado) ➜
+            Continuar sem login (Modo Visitante / Feed) ➜
           </AppText>
         </Pressable>
       </ScrollView>
@@ -441,12 +611,49 @@ const styles = StyleSheet.create({
     backgroundColor: '#10B981',
     marginRight: 6,
   },
+  activeSessionBanner: {
+    width: '100%',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    marginBottom: Spacing.md,
+    ...Shadows.sm,
+  },
+  activeDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  activeSessionActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  smallBtn: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+  },
+  smallBtnOutline: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+  },
   authCard: {
     width: '100%',
     padding: Spacing.lg,
     borderRadius: BorderRadius.xl,
     borderWidth: 1,
     ...Shadows.md,
+  },
+  dbBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    marginBottom: Spacing.md,
   },
   modeSelector: {
     flexDirection: 'row',

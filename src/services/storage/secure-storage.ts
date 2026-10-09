@@ -13,6 +13,7 @@ const STORAGE_KEYS = {
   ACCESS_TOKEN: 'onda_access_token',
   REFRESH_TOKEN: 'onda_refresh_token',
   HAS_COMPLETED_ONBOARDING: 'onda_onboarding_completed',
+  USER_DATA: 'onda_user_data',
 } as const;
 
 /**
@@ -71,7 +72,29 @@ export const secureStorage = {
     await Promise.all([
       deleteItem(STORAGE_KEYS.ACCESS_TOKEN),
       deleteItem(STORAGE_KEYS.REFRESH_TOKEN),
+      deleteItem(STORAGE_KEYS.USER_DATA),
     ]);
+  },
+
+  /** Salva os dados do usuário autenticado no armazenamento local */
+  async saveUser(user: any): Promise<void> {
+    await setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+  },
+
+  /** Recupera os dados do usuário autenticado */
+  async getUser<T = any>(): Promise<T | null> {
+    const raw = await getItem(STORAGE_KEYS.USER_DATA);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      return null;
+    }
+  },
+
+  /** Remove os dados do usuário */
+  async clearUser(): Promise<void> {
+    await deleteItem(STORAGE_KEYS.USER_DATA);
   },
 
   /** Marca que o onboarding foi concluído */

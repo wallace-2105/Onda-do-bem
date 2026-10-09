@@ -5,7 +5,7 @@
  * stories no topo, filtros por categoria e pull-to-refresh.
  */
 
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
 import {
   View,
   FlatList,
@@ -13,6 +13,8 @@ import {
   RefreshControl,
   Pressable,
   Modal,
+  Animated,
+  ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +24,7 @@ import { Image } from 'expo-image';
 import { useAppTheme } from '@/hooks/use-theme';
 import { useFeedStore } from '@/store/feed.store';
 import { useAuthStore } from '@/store/auth.store';
+import { useNotificationStore } from '@/store/notification.store';
 import { AppText } from '@/components/ui/text';
 import { PostCard } from '@/components/feed/post-card';
 import { ImpactStories } from '@/components/feed/impact-stories';
@@ -37,6 +40,63 @@ export default function FeedScreen() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [accountModalVisible, setAccountModalVisible] = useState(false);
+  const [notificationsModalVisible, setNotificationsModalVisible] = useState(false);
+
+  // Notification Store
+  const activeToast = useNotificationStore((s) => s.activeToast);
+  const hideToast = useNotificationStore((s) => s.hideToast);
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const notifications = useNotificationStore((s) => s.notifications);
+  const markAllAsRead = useNotificationStore((s) => s.markAllAsRead);
+  const markAsRead = useNotificationStore((s) => s.markAsRead);
+  const triggerLikeNotification = useNotificationStore((s) => s.triggerLikeNotification);
+  const bellShakeTrigger = useNotificationStore((s) => s.bellShakeTrigger);
+
+  // Animação de tremor do sino de notificação
+  const bellRotation = useRef(new Animated.Value(0)).current;
+  const bellScale = useRef(new Animated.Value(1)).current;
+
+  // Animação do popup discreto no topo da tela
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const toastTranslateY = useRef(new Animated.Value(-18)).current;
+  const toastScale = useRef(new Animated.Value(0.85)).current;
+
+  // Dispara tremor do sino ao receber notificação
+  useEffect(() => {
+    if (bellShakeTrigger > 0) {
+      Animated.sequence([
+        Animated.timing(bellScale, { toValue: 1.25, duration: 100, useNativeDriver: true }),
+        Animated.timing(bellRotation, { toValue: -1, duration: 60, useNativeDriver: true }),
+        Animated.timing(bellRotation, { toValue: 1, duration: 60, useNativeDriver: true }),
+        Animated.timing(bellRotation, { toValue: -0.7, duration: 60, useNativeDriver: true }),
+        Animated.timing(bellRotation, { toValue: 0.7, duration: 60, useNativeDriver: true }),
+        Animated.timing(bellRotation, { toValue: 0, duration: 60, useNativeDriver: true }),
+        Animated.timing(bellScale, { toValue: 1, duration: 100, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [bellShakeTrigger]);
+
+  // Animação suave de entrada e saída do popup discreto
+  useEffect(() => {
+    if (activeToast) {
+      Animated.parallel([
+        Animated.timing(toastOpacity, { toValue: 1, duration: 240, useNativeDriver: true }),
+        Animated.spring(toastTranslateY, { toValue: 0, tension: 65, friction: 8, useNativeDriver: true }),
+        Animated.spring(toastScale, { toValue: 1, tension: 65, friction: 8, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(toastOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+        Animated.timing(toastTranslateY, { toValue: -18, duration: 180, useNativeDriver: true }),
+        Animated.timing(toastScale, { toValue: 0.85, duration: 180, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [activeToast]);
+
+  const bellRotateInterpolate = bellRotation.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: ['-18deg', '0deg', '18deg'],
+  });
 
   const {
     posts,
@@ -179,13 +239,100 @@ export default function FeedScreen() {
 
           <Pressable
             style={({ pressed }) => [styles.iconBtn, { backgroundColor: theme.surfaceElevated }, pressed && styles.pressed]}
+            onPress={() => setNotificationsModalVisible(true)}
             accessibilityLabel="Notificações"
           >
-            <Ionicons name="notifications-outline" size={20} color={theme.text} />
-            <View style={[styles.badgeDot, { backgroundColor: theme.accent }]} />
+            <Animated.View style={{ transform: [{ rotate: bellRotateInterpolate }, { scale: bellScale }] }}>
+              <Ionicons
+                name={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
+                size={20}
+                color={unreadCount > 0 ? theme.primary : theme.text}
+              />
+            </Animated.View>
+            {unreadCount > 0 && (
+              <View style={[styles.badgeDot, { backgroundColor: '#EF4444' }]}>
+                {unreadCount > 1 && (
+                  <AppText variant="caption" style={{ color: '#FFFFFF', fontSize: 8, fontWeight: 'bold', lineHeight: 9 }}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </AppText>
+                )}
+              </View>
+            )}
           </Pressable>
         </View>
       </View>
+
+      {/* Popup Discreto no Topo da Tela vindo do Botão de Notificações */}
+      {activeToast && (
+        <Animated.View
+          style={[
+            styles.toastContainer,
+            {
+              top: insets.top + 52,
+              opacity: toastOpacity,
+              transform: [{ translateY: toastTranslateY }, { scale: toastScale }],
+            },
+          ]}
+          pointerEvents="box-none"
+        >
+          {/* Seta/triângulo indicando a origem a partir do botão do sino */}
+          <View style={[styles.toastArrow, { borderBottomColor: theme.border }]} />
+          <View style={[styles.toastArrowInner, { borderBottomColor: theme.surface }]} />
+
+          <Pressable
+            style={[
+              styles.toastCard,
+              { backgroundColor: theme.surface, borderColor: theme.border },
+              Shadows.md,
+            ]}
+            onPress={() => {
+              hideToast();
+              setNotificationsModalVisible(true);
+            }}
+          >
+            {/* Ícone de Avatar com badge de coração ❤️ */}
+            <View style={styles.toastAvatarWrap}>
+              {activeToast.senderAvatar ? (
+                <Image source={{ uri: activeToast.senderAvatar }} style={styles.toastAvatar} />
+              ) : (
+                <View style={[styles.toastAvatarFallback, { backgroundColor: '#EC4899' }]}>
+                  <Ionicons name="heart" size={16} color="#FFFFFF" />
+                </View>
+              )}
+              <View style={styles.toastHeartBadge}>
+                <Ionicons name="heart" size={9} color="#FFFFFF" />
+              </View>
+            </View>
+
+            {/* Conteúdo de Texto Discreto */}
+            <View style={styles.toastTextContent}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <AppText variant="caption" weight="bold" style={{ color: theme.text }}>
+                  {activeToast.senderName}
+                </AppText>
+                <AppText variant="caption" color="secondary" style={{ marginLeft: 4 }}>
+                  curtiu sua postagem
+                </AppText>
+              </View>
+              <AppText variant="caption" color="muted" numberOfLines={1} style={{ marginTop: 1 }}>
+                "{activeToast.postTitle || 'sua ação'}" • <AppText variant="caption" weight="bold" style={{ color: '#10B981' }}>+2 Impacto 🌱</AppText>
+              </AppText>
+            </View>
+
+            {/* Botão Fechar discreto */}
+            <Pressable
+              style={styles.toastCloseBtn}
+              onPress={(e) => {
+                e.stopPropagation();
+                hideToast();
+              }}
+              hitSlop={8}
+            >
+              <Ionicons name="close" size={16} color={theme.textMuted} />
+            </Pressable>
+          </Pressable>
+        </Animated.View>
+      )}
 
       {/* Lista com Scroll do Feed */}
       <FlatList
@@ -328,6 +475,136 @@ export default function FeedScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* Modal / Painel de Notificações */}
+      <Modal
+        visible={notificationsModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setNotificationsModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setNotificationsModalVisible(false)}
+        >
+          <Pressable
+            style={[styles.notificationsModalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="notifications" size={22} color={theme.primary} />
+                <AppText variant="h3" weight="bold" style={{ marginLeft: 6 }}>
+                  Notificações
+                </AppText>
+                {unreadCount > 0 && (
+                  <View style={[styles.unreadBadge, { backgroundColor: '#EF4444' }]}>
+                    <AppText variant="caption" weight="bold" style={{ color: '#FFFFFF', fontSize: 10 }}>
+                      {unreadCount} nova{unreadCount > 1 ? 's' : ''}
+                    </AppText>
+                  </View>
+                )}
+              </View>
+              <Pressable onPress={() => setNotificationsModalVisible(false)} hitSlop={8}>
+                <Ionicons name="close-circle-outline" size={24} color={theme.textSecondary} />
+              </Pressable>
+            </View>
+
+            {/* Botão de Teste Rápido de Curtida */}
+            <Pressable
+              style={[styles.testLikeBtn, { backgroundColor: theme.primary + '15', borderColor: theme.primary + '40' }]}
+              onPress={() => {
+                setNotificationsModalVisible(false);
+                setTimeout(() => {
+                  triggerLikeNotification({
+                    senderName: 'Marina Costa',
+                    senderAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop',
+                    postTitle: 'Mutirão de Limpeza na Praia Mole 🌊',
+                  });
+                }, 300);
+              }}
+            >
+              <Ionicons name="heart" size={16} color="#EC4899" />
+              <AppText variant="caption" weight="bold" style={{ color: theme.primary, marginLeft: 6 }}>
+                Simular Curtida de Marina Costa (Testar Popup) ❤️
+              </AppText>
+            </Pressable>
+
+            {/* Lista de Notificações */}
+            <ScrollView style={{ maxHeight: 380, marginTop: Spacing.sm }} showsVerticalScrollIndicator={false}>
+              {notifications.length === 0 ? (
+                <View style={{ paddingVertical: Spacing.xl, alignItems: 'center' }}>
+                  <AppText variant="h2">🔔</AppText>
+                  <AppText variant="bodySm" color="secondary" style={{ marginTop: 6 }}>
+                    Nenhuma notificação no momento.
+                  </AppText>
+                </View>
+              ) : (
+                notifications.map((item) => (
+                  <Pressable
+                    key={item.id}
+                    style={[
+                      styles.notifItem,
+                      {
+                        backgroundColor: item.isRead ? theme.surfaceElevated : theme.primary + '12',
+                        borderColor: theme.border,
+                      },
+                    ]}
+                    onPress={() => markAsRead(item.id)}
+                  >
+                    <View style={styles.notifAvatarContainer}>
+                      {item.sender?.avatarUrl ? (
+                        <Image source={{ uri: item.sender.avatarUrl }} style={styles.notifAvatar} />
+                      ) : (
+                        <View style={[styles.notifAvatarFallback, { backgroundColor: theme.primary }]}>
+                          <Ionicons name="heart" size={16} color="#FFFFFF" />
+                        </View>
+                      )}
+                      <View style={[styles.notifTypeBadge, { backgroundColor: item.type === 'LIKE' ? '#EC4899' : theme.primary }]}>
+                        <Ionicons
+                          name={item.type === 'LIKE' ? 'heart' : item.type === 'COMMENT' ? 'chatbubble' : 'trophy'}
+                          size={9}
+                          color="#FFFFFF"
+                        />
+                      </View>
+                    </View>
+
+                    <View style={{ flex: 1, marginLeft: Spacing.sm }}>
+                      <AppText variant="bodySm" weight={item.isRead ? 'medium' : 'bold'}>
+                        {item.title}
+                      </AppText>
+                      <AppText variant="caption" color="secondary" style={{ marginTop: 2 }}>
+                        {item.body}
+                      </AppText>
+                      <AppText variant="caption" color="muted" style={{ marginTop: 4, fontSize: 11 }}>
+                        {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </AppText>
+                    </View>
+
+                    {!item.isRead && (
+                      <View style={[styles.unreadDot, { backgroundColor: theme.primary }]} />
+                    )}
+                  </Pressable>
+                ))
+              )}
+            </ScrollView>
+
+            {/* Rodapé com Ações */}
+            {notifications.length > 0 && (
+              <View style={styles.modalFooterActions}>
+                <Pressable
+                  style={[styles.footerBtn, { borderColor: theme.border }]}
+                  onPress={markAllAsRead}
+                >
+                  <AppText variant="caption" weight="semibold" color="secondary">
+                    Marcar todas como lidas
+                  </AppText>
+                </Pressable>
+              </View>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -407,11 +684,14 @@ const styles = StyleSheet.create({
   },
   badgeDot: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: 6,
+    right: 6,
+    minWidth: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
   },
   pressed: {
     opacity: 0.7,
@@ -527,5 +807,162 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.lg,
+  },
+  toastContainer: {
+    position: 'absolute',
+    right: 12,
+    zIndex: 99999,
+    width: 310,
+    alignItems: 'flex-end',
+  },
+  toastArrow: {
+    position: 'absolute',
+    top: -8,
+    right: 22,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 8,
+    borderStyle: 'solid',
+    backgroundColor: 'transparent',
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    zIndex: 2,
+  },
+  toastArrowInner: {
+    position: 'absolute',
+    top: -6.5,
+    right: 22,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 8,
+    borderStyle: 'solid',
+    backgroundColor: 'transparent',
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    zIndex: 3,
+  },
+  toastCard: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: Spacing.sm + 2,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    gap: Spacing.sm,
+  },
+  toastAvatarWrap: {
+    position: 'relative',
+  },
+  toastAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  toastAvatarFallback: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toastHeartBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 15,
+    height: 15,
+    borderRadius: 8,
+    backgroundColor: '#EC4899',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  toastTextContent: {
+    flex: 1,
+  },
+  toastCloseBtn: {
+    padding: 4,
+  },
+  notificationsModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    padding: Spacing.lg,
+    ...Shadows.lg,
+  },
+  unreadBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+    marginLeft: 8,
+  },
+  testLikeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    marginTop: Spacing.xs,
+  },
+  notifItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    marginBottom: Spacing.xs,
+  },
+  notifAvatarContainer: {
+    position: 'relative',
+  },
+  notifAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  notifAvatarFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notifTypeBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginLeft: 6,
+  },
+  modalFooterActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: Spacing.md,
+  },
+  footerBtn: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
   },
 });

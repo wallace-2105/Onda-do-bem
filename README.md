@@ -234,3 +234,4 @@ npx expo start
 ## 📋 Licença
 
 Este projeto está sob a licença [MIT](LICENSE).
+

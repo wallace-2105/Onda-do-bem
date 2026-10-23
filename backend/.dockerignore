@@ -1,0 +1,7 @@
+.gradle
+.kotlin
+build
+data
+*.log
+.git
+.gitignore

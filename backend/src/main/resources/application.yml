@@ -1,17 +1,30 @@
 spring:
   application:
     name: ondadobem-api
-  profiles:
-    active: supabase
+
+  datasource:
+    # Supabase Session Pooler IPv4 (porta 5432)
+    url: ${SUPABASE_DB_URL:jdbc:postgresql://aws-1-sa-east-1.pooler.supabase.com:5432/postgres?sslmode=require}
+    driver-class-name: org.postgresql.Driver
+    username: ${SUPABASE_DB_USER:postgres.fljmkiiffvkdciysweme}
+    password: ${SUPABASE_DB_PASSWORD:123ondadobem}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
 
 server:
   port: ${PORT:8080}
 
-
 app:
   jwt:
     # Chave secreta de no mínimo 256 bits para assinatura HMAC-SHA256
-    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    secret: ${APP_JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
     # 24 horas em milissegundos
     access-token-expiration-ms: 86400000
     # 7 dias em milissegundos
@@ -19,7 +32,8 @@ app:
 
 ---
 # ==========================================
-# PERFIL LOCAL (H2 Database em arquivo)
+# PERFIL LOCAL OPCIONAL (H2 Database em arquivo)
+# Ative com: --spring.profiles.active=local
 # ==========================================
 spring:
   config:
@@ -27,50 +41,17 @@ spring:
       on-profile: local
 
   datasource:
-    url: ${DATABASE_URL:jdbc:h2:file:./data/ondadobemdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    url: jdbc:h2:file:./data/ondadobemdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password: ""
 
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
-    hibernate:
-      ddl-auto: update
-    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
 
   h2:
     console:
       enabled: true
       path: /h2-console
-
----
-# ==========================================
-# PERFIL SUPABASE / POSTGRESQL (Nuvem compartilhada)
-# ==========================================
-spring:
-  config:
-    activate:
-      on-profile: supabase
-
-  datasource:
-    # Supabase Session Pooler IPv4 (porta 5432)
-    url: ${SUPABASE_DB_URL:${DATABASE_URL:jdbc:postgresql://aws-1-sa-east-1.pooler.supabase.com:5432/postgres?sslmode=require}}
-    driver-class-name: org.postgresql.Driver
-    username: ${SUPABASE_DB_USER:${DATABASE_USERNAME:postgres.fljmkiiffvkdciysweme}}
-    password: ${SUPABASE_DB_PASSWORD:123ondadobem}
-
-  jpa:
-    hibernate:
-      ddl-auto: update
-
-    show-sql: false
-    properties:
-      hibernate:
-        format_sql: true
-
-  h2:
-    console:
-      enabled: false

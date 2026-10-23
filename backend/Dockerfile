@@ -41,4 +41,5 @@ EXPOSE 8080
 # -XX:+UseSerialGC: Consumo mínimo de memória para GC
 # -XX:MaxRAMPercentage=75.0: Deixa margem para SO e Metaspace (~380MB max heap)
 # -Xss512k: Reduz overhead de memória por thread
-ENTRYPOINT ["java", "-XX:+UseSerialGC", "-Xss512k", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-XX:+UseSerialGC", "-Xss512k", "-XX:MaxRAMPercentage=75.0", "-Dspring.profiles.active=supabase", "-jar", "app.jar"]
+

@@ -37,5 +37,6 @@ COPY --from=builder /app/build/libs/api-0.0.1-SNAPSHOT.jar app.jar
 ENV PORT=8080
 EXPOSE 8080
 
-# Otimizações de JVM para o plano Free do Render (512MB RAM):
-ENTRYPOINT ["java", "-XX:+UseSerialGC", "-Xss512k", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+# Otimizações de JVM para o plano Free do Render (512MB RAM) e ativação do perfil Supabase:
+ENTRYPOINT ["java", "-XX:+UseSerialGC", "-Xss512k", "-XX:MaxRAMPercentage=75.0", "-Dspring.profiles.active=supabase", "-jar", "app.jar"]
+

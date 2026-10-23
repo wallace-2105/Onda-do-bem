@@ -63,9 +63,9 @@ spring:
     password: ${SUPABASE_DB_PASSWORD:123ondadobem}
 
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
+
     show-sql: false
     properties:
       hibernate:

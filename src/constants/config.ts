@@ -20,10 +20,13 @@ import { Platform } from 'react-native';
  * Para celular físico, defina EXPO_PUBLIC_API_URL no .env.local com seu IP.
  */
 function getApiUrl(): string {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
   if (Platform.OS === 'web') {
     return 'http://localhost:8080/api';
   }
-  return process.env.EXPO_PUBLIC_API_URL || (Platform.OS === 'android' ? 'http://10.0.2.2:8080/api' : 'http://localhost:8080/api');
+  return Platform.OS === 'android' ? 'http://10.0.2.2:8080/api' : 'http://localhost:8080/api';
 }
 
 export const Config = {

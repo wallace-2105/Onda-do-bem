@@ -1,0 +1,10 @@
+node_modules
+.expo
+assets
+src
+.git
+backend/.gradle
+backend/.kotlin
+backend/build
+backend/data
+backend/*.log

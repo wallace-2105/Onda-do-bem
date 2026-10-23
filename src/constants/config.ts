@@ -39,8 +39,9 @@ export const Config = {
    */
   apiBaseUrl: getApiUrl(),
 
-  /** Timeout padrão para requisições HTTP (em ms) */
-  apiTimeout: 15_000,
+  /** Timeout padrão para requisições HTTP (em ms) - 45s para tolerar cold-starts no Render Free */
+  apiTimeout: 45_000,
+
 
   /** Número de itens por página em listagens */
   defaultPageSize: 20,

@@ -5,6 +5,7 @@ import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
 import org.springframework.stereotype.Service
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.util.*
 import javax.crypto.SecretKey
 
@@ -12,7 +13,16 @@ import javax.crypto.SecretKey
 class JwtService(private val jwtProperties: JwtProperties) {
 
     private val signingKey: SecretKey
-        get() = Keys.hmacShaKeyFor(jwtProperties.secret.toByteArray(StandardCharsets.UTF_8))
+        get() {
+            val bytes = jwtProperties.secret.toByteArray(StandardCharsets.UTF_8)
+            val keyBytes = if (bytes.size < 32) {
+                // Garante no mínimo 256 bits mesmo que APP_JWT_SECRET venha com 128 bits (ex: generateValue do Render)
+                MessageDigest.getInstance("SHA-256").digest(bytes)
+            } else {
+                bytes
+            }
+            return Keys.hmacShaKeyFor(keyBytes)
+        }
 
     fun generateAccessToken(userId: UUID, email: String): String {
         return buildToken(userId, email, jwtProperties.accessTokenExpirationMs)

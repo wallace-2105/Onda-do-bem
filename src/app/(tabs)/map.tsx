@@ -29,6 +29,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { useAppTheme } from '@/hooks/use-theme';
 import { useFeedStore } from '@/store/feed.store';
+import { useAuthStore } from '@/store/auth.store';
 import { AppText } from '@/components/ui/text';
 import { Avatar } from '@/components/ui/avatar';
 import { AppButton } from '@/components/ui/button';
@@ -454,6 +455,12 @@ export default function MapScreen() {
 
   // Submeter a nova Ação Sustentável
   const handleSubmitAction = async () => {
+    if (!useAuthStore.getState().user) {
+      showAlert('Entre para publicar', 'Faça login ou crie sua conta para fixar sua ação no mapa.');
+      setIsCreateModalOpen(false);
+      router.push({ pathname: '/login', params: { mode: 'login' } });
+      return;
+    }
     if (!formTitle.trim()) {
       Alert.alert('Título obrigatório', 'Por favor, dê um título descritivo para sua ação ecológica.');
       return;

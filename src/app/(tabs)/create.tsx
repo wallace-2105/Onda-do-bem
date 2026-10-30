@@ -24,6 +24,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { useAppTheme } from '@/hooks/use-theme';
 import { useFeedStore } from '@/store/feed.store';
+import { useAuthStore } from '@/store/auth.store';
 import { AppText } from '@/components/ui/text';
 import { AppButton } from '@/components/ui/button';
 import { Spacing, BorderRadius, FontWeight } from '@/constants/theme';
@@ -136,6 +137,11 @@ export default function CreatePostScreen() {
   };
 
   const handleSubmit = async () => {
+    if (!useAuthStore.getState().user) {
+      showAlert('Entre para publicar', 'Faça login ou crie sua conta para publicar sua ação no feed.');
+      router.push({ pathname: '/login', params: { mode: 'login' } });
+      return;
+    }
     if (!title.trim()) {
       Alert.alert('Atenção', 'Por favor, informe o título da sua ação.');
       return;

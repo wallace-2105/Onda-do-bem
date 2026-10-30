@@ -42,6 +42,7 @@ export default function FeedScreen() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [accountModalVisible, setAccountModalVisible] = useState(false);
+  const [authModalVisible, setAuthModalVisible] = useState(false);
   const [notificationsModalVisible, setNotificationsModalVisible] = useState(false);
 
   // Notification Store
@@ -226,7 +227,7 @@ export default function FeedScreen() {
                 { backgroundColor: theme.primary + '18', borderColor: theme.primary + '60' },
                 pressed && styles.pressed,
               ]}
-              onPress={() => router.push('/login')}
+              onPress={() => setAuthModalVisible(true)}
               accessibilityLabel="Fazer login no aplicativo"
             >
               <Ionicons name="log-in-outline" size={18} color={theme.primary} />
@@ -467,8 +468,8 @@ export default function FeedScreen() {
                     style={[styles.modalActionBtn, { backgroundColor: '#EF444415', borderColor: '#EF444440', borderWidth: 1 }]}
                     onPress={async () => {
                       setAccountModalVisible(false);
+                      // Volta ao feed como convidado
                       await logout();
-                      router.replace('/login');
                     }}
                   >
                     <Ionicons name="log-out-outline" size={18} color="#EF4444" />
@@ -479,6 +480,66 @@ export default function FeedScreen() {
                 </View>
               </View>
             )}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Modal de Acesso do Convidado: Entrar ou Cadastrar */}
+      <Modal
+        visible={authModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAuthModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setAuthModalVisible(false)}>
+          <Pressable
+            style={[styles.accountModalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="person-circle" size={24} color={theme.primary} />
+                <AppText variant="h3" weight="bold" style={{ marginLeft: 6 }}>
+                  Bem-vindo(a) 🌊
+                </AppText>
+              </View>
+              <Pressable onPress={() => setAuthModalVisible(false)} hitSlop={8}>
+                <Ionicons name="close-circle-outline" size={24} color={theme.textSecondary} />
+              </Pressable>
+            </View>
+
+            <AppText variant="bodySm" color="secondary">
+              Você está navegando como convidado. Entre ou crie sua conta para publicar ações,
+              curtir e comentar.
+            </AppText>
+
+            <View style={styles.modalButtonsGroup}>
+              <Pressable
+                style={[styles.modalActionBtn, { backgroundColor: theme.primary }]}
+                onPress={() => {
+                  setAuthModalVisible(false);
+                  router.push({ pathname: '/login', params: { mode: 'login' } });
+                }}
+              >
+                <Ionicons name="log-in-outline" size={18} color="#FFFFFF" />
+                <AppText variant="bodySm" weight="bold" style={{ color: '#FFFFFF', marginLeft: 8 }}>
+                  Entrar
+                </AppText>
+              </Pressable>
+
+              <Pressable
+                style={[styles.modalActionBtn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, borderWidth: 1 }]}
+                onPress={() => {
+                  setAuthModalVisible(false);
+                  router.push({ pathname: '/login', params: { mode: 'register' } });
+                }}
+              >
+                <Ionicons name="person-add-outline" size={18} color={theme.primary} />
+                <AppText variant="bodySm" weight="bold" style={{ color: theme.text, marginLeft: 8 }}>
+                  Cadastre-se
+                </AppText>
+              </Pressable>
+            </View>
           </Pressable>
         </Pressable>
       </Modal>

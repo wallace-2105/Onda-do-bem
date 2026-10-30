@@ -19,7 +19,7 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -71,11 +71,16 @@ export default function LoginScreen() {
   const logout = useAuthStore((s) => s.logout);
   const isLoading = useAuthStore((s) => s.isLoading);
 
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  // Modo inicial vem do botão escolhido no feed (Entrar / Cadastre-se)
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const startsInRegister = mode === 'register';
+  const [authMode, setAuthMode] = useState<'login' | 'register'>(
+    startsInRegister ? 'register' : 'login'
+  );
 
   // Campos de Login / Registro
-  const [email, setEmail] = useState('lucas.silva@ondadobem.org');
-  const [password, setPassword] = useState('senha123');
+  const [email, setEmail] = useState(startsInRegister ? '' : 'lucas.silva@ondadobem.org');
+  const [password, setPassword] = useState(startsInRegister ? '' : 'senha123');
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -99,15 +104,11 @@ export default function LoginScreen() {
 
     try {
       const user = await login(targetEmail, targetPass);
+      // Navega direto: Alert com botões não funciona no react-native-web
+      router.replace('/(tabs)');
       Alert.alert(
         'Login efetuado com sucesso! 🌊💾',
-        `Bem-vindo(a) de volta, ${user.displayName}!\nSeu acesso foi registrado e salvo com sucesso no banco de dados.`,
-        [
-          {
-            text: 'Entrar no Aplicativo',
-            onPress: () => router.replace('/(tabs)'),
-          },
-        ]
+        `Bem-vindo(a) de volta, ${user.displayName}!`
       );
     } catch (err: any) {
       const isNetworkError =
@@ -214,15 +215,10 @@ export default function LoginScreen() {
         password,
       });
 
+      router.replace('/(tabs)');
       Alert.alert(
         'Conta Criada com Sucesso! 🌱💾',
-        `Seja bem-vindo(a) ao Onda do Bem, ${user.displayName}!\nSeu cadastro foi salvo com sucesso no banco de dados.`,
-        [
-          {
-            text: 'Acessar o Aplicativo',
-            onPress: () => router.replace('/(tabs)'),
-          },
-        ]
+        `Seja bem-vindo(a) ao Onda do Bem, ${user.displayName}!`
       );
     } catch (err: any) {
       const isNetworkError =
@@ -562,7 +558,7 @@ export default function LoginScreen() {
           style={styles.guestLink}
         >
           <AppText variant="bodySm" color="secondary" weight="semibold">
-            Continuar sem login (Modo Visitante / Feed) ➜
+            Continuar como convidado ➜
           </AppText>
         </Pressable>
       </ScrollView>

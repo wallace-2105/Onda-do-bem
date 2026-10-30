@@ -13,6 +13,7 @@ import {
   Switch,
   Pressable,
   Alert,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -65,16 +66,21 @@ export default function SettingsScreen() {
   };
 
   const handleLogout = () => {
+    // Após sair, o usuário continua no feed como convidado
+    const doLogout = async () => {
+      await logout();
+      router.replace('/(tabs)');
+    };
+
+    // Alert com botões não funciona no react-native-web
+    if (Platform.OS === 'web') {
+      if (window.confirm('Deseja realmente sair da sua conta?')) doLogout();
+      return;
+    }
+
     Alert.alert('Desconectar', 'Deseja realmente sair da sua conta?', [
       { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Sair',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-          router.replace('/login');
-        },
-      },
+      { text: 'Sair', style: 'destructive', onPress: doLogout },
     ]);
   };
 

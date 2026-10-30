@@ -149,9 +149,12 @@ export default function LoginScreen() {
           loginCount: 1,
         };
 
+        const isPlaceholder = Config.apiBaseUrl.includes('SEU-BACKEND');
         Alert.alert(
-          'API Spring Boot Não Respondendo ⚠️',
-          `Não foi possível conectar ao servidor em ${Config.apiBaseUrl}.\n\nDeseja realizar o login em Modo Local com persistência segura no banco do dispositivo (SecureStore / AsyncStorage)?`,
+          isPlaceholder ? 'Configuração Pendente na Vercel ⚠️' : 'API Spring Boot Não Respondendo ⚠️',
+          isPlaceholder
+            ? `A variável EXPO_PUBLIC_API_URL na Vercel está com o placeholder:\n${Config.apiBaseUrl}\n\nAtualize na Vercel com a URL real do seu serviço no Render e clique em Redeploy.`
+            : `Não foi possível conectar ao servidor em ${Config.apiBaseUrl}.\n\nDeseja realizar o login em Modo Local com persistência segura no banco do dispositivo (SecureStore / AsyncStorage)?`,
           [
             {
               text: 'Cancelar',
@@ -167,7 +170,9 @@ export default function LoginScreen() {
           ]
         );
         setErrorMessage(
-          `API inacessível em ${Config.apiBaseUrl}. Para conectar ao Spring Boot execute: .\\gradlew.bat bootRun na pasta backend.`
+          isPlaceholder
+            ? `Configuração pendente: A URL da API está com o placeholder '${Config.apiBaseUrl}'. Acesse a Vercel, altere EXPO_PUBLIC_API_URL para a URL do Render e faça Redeploy.`
+            : `API inacessível em ${Config.apiBaseUrl}. Para conectar ao Spring Boot execute: .\\gradlew.bat bootRun na pasta backend.`
         );
         return;
       }

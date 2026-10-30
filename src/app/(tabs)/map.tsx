@@ -37,6 +37,7 @@ import { PostCategory, type Post } from '@/types/entities';
 import { CATEGORY_INFO } from '@/constants/mock-data';
 import { getPostImageSource } from '@/utils/post-image';
 import { calculateUserRank } from '@/utils/rank';
+import { showAlert } from '@/utils/platform';
 
 // Presets de fotos de alta qualidade para teste rápido
 const SAMPLE_PHOTO_PRESETS = [
@@ -499,9 +500,18 @@ export default function MapScreen() {
         }
       }, 500);
 
-      Alert.alert('Sucesso! 🌱', 'Sua ação sustentável foi fixada no mapa com sucesso!');
+      if (createdPost.id.startsWith('post-')) {
+        showAlert(
+          'Salvo só neste dispositivo',
+          `Não foi possível enviar sua ação ao servidor agora.\n\nMotivo: ${
+            useFeedStore.getState().lastSyncError ?? 'desconhecido'
+          }`
+        );
+      } else {
+        showAlert('Sucesso! 🌱', 'Sua ação sustentável foi fixada no mapa com sucesso!');
+      }
     } catch (err) {
-      Alert.alert('Erro ao salvar', 'Ocorreu um erro ao registrar sua ação no mapa.');
+      showAlert('Erro ao salvar', 'Ocorreu um erro ao registrar sua ação no mapa.');
     } finally {
       setIsSubmitting(false);
     }

@@ -29,6 +29,7 @@ import { AppButton } from '@/components/ui/button';
 import { Spacing, BorderRadius, FontWeight } from '@/constants/theme';
 import { PostCategory } from '@/types/entities';
 import { CATEGORY_INFO } from '@/constants/mock-data';
+import { showAlert } from '@/utils/platform';
 
 const SAMPLE_PHOTO_PRESETS = [
   {
@@ -158,9 +159,11 @@ export default function CreatePostScreen() {
     setLoading(false);
 
     if (createdPost.id.startsWith('post-')) {
-      Alert.alert(
+      showAlert(
         'Publicado só neste dispositivo',
-        'Não foi possível enviar sua ação ao servidor agora. Ela ficará visível apenas aqui.'
+        `Não foi possível enviar sua ação ao servidor agora. Ela ficará visível apenas aqui.\n\nMotivo: ${
+          useFeedStore.getState().lastSyncError ?? 'desconhecido'
+        }`
       );
     }
     // Limpa campos e volta para o feed

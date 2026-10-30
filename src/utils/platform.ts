@@ -4,7 +4,7 @@
  * Utilidades para lidar com diferenças entre plataformas.
  */
 
-import { Platform, Dimensions } from 'react-native';
+import { Alert, Platform, Dimensions } from 'react-native';
 
 export const isIOS = Platform.OS === 'ios';
 export const isAndroid = Platform.OS === 'android';
@@ -17,6 +17,15 @@ export { SCREEN_WIDTH, SCREEN_HEIGHT };
 /** Verifica se o dispositivo é um tablet (largura >= 768) */
 export function isTablet(): boolean {
   return SCREEN_WIDTH >= 768;
+}
+
+/** Alerta simples que também funciona na web (no react-native-web o Alert.alert não faz nada) */
+export function showAlert(title: string, message: string): void {
+  if (isWeb) {
+    window.alert(`${title}\n\n${message}`);
+    return;
+  }
+  Alert.alert(title, message);
 }
 
 /** Retorna o valor correto por plataforma */

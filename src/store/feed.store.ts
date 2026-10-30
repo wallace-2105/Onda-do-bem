@@ -14,6 +14,7 @@ import { type Post, type Comment, type User, PostCategory } from '@/types/entiti
 import type { ApiResponse, PaginatedResponse } from '@/types/api';
 import { INITIAL_POSTS, CURRENT_USER } from '@/constants/mock-data';
 import { calculateUserRank } from '@/utils/rank';
+import { normalizeError } from '@/utils/error-handler';
 import { apiGet, apiPost, Endpoints } from '@/services/api';
 import { imageService, isLocalImageUri } from '@/services/image/image.service';
 import { useNotificationStore } from './notification.store';
@@ -35,6 +36,8 @@ interface FeedState {
   posts: Post[];
   currentUser: User;
   isRefreshing: boolean;
+  /** Motivo da última falha ao enviar uma publicação ao backend (null se sincronizou) */
+  lastSyncError: string | null;
   selectedCategory: PostCategory | 'ALL';
   toggleLike: (postId: string) => void;
   addPost: (input: CreatePostInput) => Promise<Post>;
@@ -71,6 +74,7 @@ export const useFeedStore = create<FeedState>()(
       posts: hydratedInitialPosts,
       currentUser: initialCurrentUser,
       isRefreshing: false,
+      lastSyncError: null,
       selectedCategory: 'ALL',
 
       toggleLike: (postId: string) => {
@@ -206,6 +210,7 @@ export const useFeedStore = create<FeedState>()(
           input.imageUrl ||
           'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&auto=format&fit=crop';
         let savedPost: Post | null = null;
+        set({ lastSyncError: null });
 
         // Fotos do dispositivo (blob:/file:) só existem localmente: envia ao Storage antes de publicar.
         // Se o backend falhar (offline / modo local), o post fica salvo apenas neste dispositivo
@@ -225,8 +230,10 @@ export const useFeedStore = create<FeedState>()(
             impactValue: input.impactScore || 10,
           });
           savedPost = response.data;
-        } catch (error: any) {
-          console.warn('[FeedStore] Publicação não sincronizada com o backend:', error?.message);
+        } catch (error) {
+          const { message, statusCode } = normalizeError(error);
+          console.warn('[FeedStore] Publicação não sincronizada com o backend:', statusCode, message);
+          set({ lastSyncError: statusCode ? `${message} (HTTP ${statusCode})` : message });
         }
 
         let createdPost: Post | null = null;

@@ -465,7 +465,7 @@ export default function MapScreen() {
     try {
       setIsSubmitting(true);
 
-      const createdPost = addPost({
+      const createdPost = await addPost({
         title: formTitle.trim(),
         description: formDescription.trim(),
         category: formCategory,

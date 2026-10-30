@@ -5,7 +5,7 @@
  * stories no topo, filtros por categoria e pull-to-refresh.
  */
 
-import React, { useMemo, useEffect, useState, useRef } from 'react';
+import React, { useMemo, useEffect, useState, useRef, useCallback } from 'react';
 import {
   View,
   FlatList,
@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 
 import { useAppTheme } from '@/hooks/use-theme';
@@ -31,6 +31,8 @@ import { ImpactStories } from '@/components/feed/impact-stories';
 import { CategoryChips } from '@/components/feed/category-chips';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
 import { type Post } from '@/types/entities';
+
+const FEED_REVALIDATE_INTERVAL_MS = 20_000;
 
 export default function FeedScreen() {
   const theme = useAppTheme();
@@ -113,10 +115,15 @@ export default function FeedScreen() {
     return posts.filter((post) => post.category === selectedCategory);
   }, [posts, selectedCategory]);
 
-  // Carrega publicações atualizadas da API ao abrir a tela
-  useEffect(() => {
-    refreshFeed();
-  }, [refreshFeed]);
+  // Revalida o feed ao focar a tela e periodicamente enquanto ela está visível,
+  // para que publicações feitas em outros dispositivos apareçam sem recarregar a página
+  useFocusEffect(
+    useCallback(() => {
+      refreshFeed({ silent: true });
+      const interval = setInterval(() => refreshFeed({ silent: true }), FEED_REVALIDATE_INTERVAL_MS);
+      return () => clearInterval(interval);
+    }, [refreshFeed])
+  );
 
   const renderHeader = () => (
     <View style={styles.headerComponent}>

@@ -9,6 +9,7 @@ import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.multipart.MaxUploadSizeExceededException
 import org.springframework.web.server.ResponseStatusException
 
 @RestControllerAdvice
@@ -63,6 +64,16 @@ class GlobalExceptionHandler {
             error = HttpStatus.FORBIDDEN.reasonPhrase
         )
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error)
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException::class)
+    fun handleMaxUploadSize(ex: MaxUploadSizeExceededException): ResponseEntity<ApiError> {
+        val error = ApiError(
+            statusCode = HttpStatus.CONTENT_TOO_LARGE.value(),
+            message = "A imagem excede o tamanho máximo de 10MB",
+            error = HttpStatus.CONTENT_TOO_LARGE.reasonPhrase
+        )
+        return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE).body(error)
     }
 
     @ExceptionHandler(Exception::class)

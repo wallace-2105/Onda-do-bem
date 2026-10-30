@@ -6,6 +6,7 @@ import com.ondadobem.api.domain.enums.ImpactType
 import com.ondadobem.api.domain.enums.PostCategory
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 
 data class PostResponse(
@@ -64,6 +65,8 @@ data class CreatePostRequest(
     @field:NotNull(message = "A categoria é obrigatória")
     val category: PostCategory,
 
+    // URIs locais (blob:, file:, data:) só existem no dispositivo de origem — exigir URL pública
+    @field:Pattern(regexp = "^(https?://|asset:).+", message = "A imagem deve ser uma URL pública (faça o upload antes de publicar)")
     val imageUrl: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,

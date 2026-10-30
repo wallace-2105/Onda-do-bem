@@ -134,7 +134,7 @@ export default function CreatePostScreen() {
     setIsCustomPhoto(false);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim()) {
       Alert.alert('Atenção', 'Por favor, informe o título da sua ação.');
       return;
@@ -146,7 +146,7 @@ export default function CreatePostScreen() {
 
     setLoading(true);
 
-    addPost({
+    const createdPost = await addPost({
       title: title.trim(),
       description: description.trim(),
       category,
@@ -156,6 +156,13 @@ export default function CreatePostScreen() {
     });
 
     setLoading(false);
+
+    if (createdPost.id.startsWith('post-')) {
+      Alert.alert(
+        'Publicado só neste dispositivo',
+        'Não foi possível enviar sua ação ao servidor agora. Ela ficará visível apenas aqui.'
+      );
+    }
     // Limpa campos e volta para o feed
     setTitle('');
     setDescription('');

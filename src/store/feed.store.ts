@@ -11,10 +11,11 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { type Post, type Comment, type User, PostCategory } from '@/types/entities';
-import type { PaginatedResponse } from '@/types/api';
+import type { ApiResponse, PaginatedResponse } from '@/types/api';
 import { INITIAL_POSTS, CURRENT_USER } from '@/constants/mock-data';
 import { calculateUserRank } from '@/utils/rank';
 import { apiGet, apiPost, Endpoints } from '@/services/api';
+import { imageService, isLocalImageUri } from '@/services/image/image.service';
 import { useNotificationStore } from './notification.store';
 
 interface CreatePostInput {
@@ -36,9 +37,10 @@ interface FeedState {
   isRefreshing: boolean;
   selectedCategory: PostCategory | 'ALL';
   toggleLike: (postId: string) => void;
-  addPost: (input: CreatePostInput) => Post;
+  addPost: (input: CreatePostInput) => Promise<Post>;
   addComment: (postId: string, content: string) => void;
-  refreshFeed: () => Promise<void>;
+  /** `silent` não liga o indicador de pull-to-refresh (usado na revalidação periódica) */
+  refreshFeed: (options?: { silent?: boolean }) => Promise<void>;
   setSelectedCategory: (category: PostCategory | 'ALL') => void;
   resetToDefaults: () => void;
 }
@@ -195,7 +197,38 @@ export const useFeedStore = create<FeedState>()(
         });
       },
 
-      addPost: (input: CreatePostInput): Post => {
+      addPost: async (input: CreatePostInput): Promise<Post> => {
+        const { currentUser } = useFeedStore.getState();
+        const latitude = input.latitude !== undefined ? input.latitude : -27.5954;
+        const longitude = input.longitude !== undefined ? input.longitude : -48.548;
+        const locationName = input.locationName || currentUser.location || 'Brasil';
+        let imageUrl =
+          input.imageUrl ||
+          'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&auto=format&fit=crop';
+        let savedPost: Post | null = null;
+
+        // Fotos do dispositivo (blob:/file:) só existem localmente: envia ao Storage antes de publicar.
+        // Se o backend falhar (offline / modo local), o post fica salvo apenas neste dispositivo
+        // com id `post-*`, e a tela avisa o usuário.
+        try {
+          if (isLocalImageUri(imageUrl)) {
+            imageUrl = await imageService.uploadImage(imageUrl);
+          }
+          const response = await apiPost<ApiResponse<Post>>(Endpoints.posts.create, {
+            title: input.title,
+            description: input.description,
+            category: input.category,
+            imageUrl,
+            locationName,
+            latitude,
+            longitude,
+            impactValue: input.impactScore || 10,
+          });
+          savedPost = response.data;
+        } catch (error: any) {
+          console.warn('[FeedStore] Publicação não sincronizada com o backend:', error?.message);
+        }
+
         let createdPost: Post | null = null;
         set((state) => {
           const postImpact = input.impactScore || 10;
@@ -217,42 +250,28 @@ export const useFeedStore = create<FeedState>()(
           CURRENT_USER.rankTitle = updatedRankInfo.title;
 
           const newPost: Post = {
-            id: `post-${Date.now()}`,
+            id: savedPost?.id ?? `post-${Date.now()}`,
             authorId: updatedCurrentUser.id,
             author: updatedCurrentUser,
             title: input.title,
             description: input.description,
             category: input.category,
-            imageUrl:
-              input.imageUrl ||
-              'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&auto=format&fit=crop',
-            latitude: input.latitude !== undefined ? input.latitude : -27.5954,
-            longitude: input.longitude !== undefined ? input.longitude : -48.548,
-            locationName: input.locationName || updatedCurrentUser.location || 'Brasil',
+            imageUrl,
+            latitude,
+            longitude,
+            locationName,
             likesCount: 1,
             commentsCount: 0,
             impactScore: postImpact,
             isLiked: true,
             comments: [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: savedPost?.createdAt ?? new Date().toISOString(),
+            updatedAt: savedPost?.updatedAt ?? new Date().toISOString(),
             startTime: input.startTime,
             endTime: input.endTime,
           };
 
           createdPost = newPost;
-
-          // Tenta persistir no backend
-          apiPost<any>(Endpoints.posts.create, {
-            title: input.title,
-            description: input.description,
-            category: input.category,
-            imageUrl: newPost.imageUrl,
-            locationName: newPost.locationName,
-            latitude: newPost.latitude,
-            longitude: newPost.longitude,
-            impactValue: postImpact,
-          }).catch(() => {});
 
           return {
             posts: [newPost, ...state.posts],
@@ -297,8 +316,9 @@ export const useFeedStore = create<FeedState>()(
         });
       },
 
-      refreshFeed: async () => {
-        set({ isRefreshing: true });
+      refreshFeed: async (options) => {
+        const silent = options?.silent === true;
+        if (!silent) set({ isRefreshing: true });
         try {
           const response = await apiGet<PaginatedResponse<Post>>(Endpoints.posts.list);
           if (response?.data && Array.isArray(response.data) && response.data.length > 0) {
@@ -311,7 +331,7 @@ export const useFeedStore = create<FeedState>()(
           console.warn('[FeedStore] URL tentada:', Config.apiBaseUrl);
           console.warn('[FeedStore] Erro:', error?.code, error?.message);
         } finally {
-          set({ isRefreshing: false });
+          if (!silent) set({ isRefreshing: false });
         }
       },
 

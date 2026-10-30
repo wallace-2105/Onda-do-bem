@@ -18,6 +18,11 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
 server:
   port: ${PORT:8080}
 
@@ -29,6 +34,12 @@ app:
     access-token-expiration-ms: 86400000
     # 7 dias em milissegundos
     refresh-token-expiration-ms: 604800000
+
+  supabase:
+    # Supabase Storage (upload das imagens dos posts)
+    url: ${SUPABASE_URL:}
+    service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+    storage-bucket: ${SUPABASE_STORAGE_BUCKET:post-images}
 
 ---
 # ==========================================

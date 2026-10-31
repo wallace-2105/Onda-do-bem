@@ -6,9 +6,11 @@ import com.ondadobem.api.dto.UpdateUserRequest
 import com.ondadobem.api.dto.UserResponse
 import com.ondadobem.api.service.UserService
 import jakarta.validation.Valid
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartFile
 import java.util.UUID
 
 @RestController
@@ -37,6 +39,17 @@ class UserController(
         val updatedUser = userService.updateProfile(principal.id, request)
         return ResponseEntity.ok(
             ApiResponse(data = updatedUser, message = "Perfil atualizado com sucesso!")
+        )
+    }
+
+    @PostMapping("/me/avatar", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun uploadAvatar(
+        @AuthenticationPrincipal principal: UserPrincipal,
+        @RequestParam("file") file: MultipartFile
+    ): ResponseEntity<ApiResponse<UserResponse>> {
+        val updatedUser = userService.updateAvatar(principal.id, file)
+        return ResponseEntity.ok(
+            ApiResponse(data = updatedUser, message = "Foto de perfil atualizada!")
         )
     }
 }

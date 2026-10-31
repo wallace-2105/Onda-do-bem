@@ -22,7 +22,7 @@ class UploadController(
         @RequestParam("file") file: MultipartFile,
         @AuthenticationPrincipal principal: UserPrincipal
     ): ResponseEntity<ApiResponse<UploadImageResponse>> {
-        val url = storageService.uploadPostImage(file, principal.id)
+        val url = storageService.uploadImage(file, "posts", principal.id)
         return ResponseEntity.status(HttpStatus.CREATED).body(
             ApiResponse(data = UploadImageResponse(url = url), message = "Imagem enviada com sucesso!")
         )

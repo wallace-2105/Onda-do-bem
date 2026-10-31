@@ -1,6 +1,7 @@
 package com.ondadobem.api.dto
 
 import com.ondadobem.api.domain.entity.UserEntity
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 
 data class UserResponse(
@@ -51,5 +52,8 @@ data class UpdateUserRequest(
     val bio: String? = null,
 
     val location: String? = null,
+
+    // URIs locais (blob:, file:) só existem no dispositivo de origem — use POST /api/users/me/avatar
+    @field:Pattern(regexp = "^https?://.+", message = "A foto de perfil deve ser uma URL pública")
     val avatarUrl: String? = null
 )

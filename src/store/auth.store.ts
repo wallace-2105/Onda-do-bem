@@ -13,6 +13,7 @@ import type { ApiResponse, AuthResponse, RegisterRequest } from '@/types/api';
 import { secureStorage } from '@/services/storage/secure-storage';
 import { apiPost, apiGet, Endpoints } from '@/services/api';
 import { tokenRegistry } from '@/services/api/token-registry';
+import { imageService } from '@/services/image/image.service';
 import { useFeedStore } from './feed.store';
 
 // ---------------------------------------------------------------------------
@@ -49,6 +50,8 @@ interface AuthActions {
   setTokens: (accessToken: string, refreshToken: string) => Promise<void>;
   /** Atualiza o perfil do usuário */
   updateUser: (user: Partial<User>) => void;
+  /** Envia nova foto de perfil ao backend (Supabase Storage) e atualiza o usuário */
+  uploadAvatar: (uri: string) => Promise<User>;
   /** Faz logout limpando tudo */
   logout: () => Promise<void>;
   /** Marca onboarding como completo */
@@ -219,6 +222,27 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
       secureStorage.saveUser(updatedUser).catch(() => {});
       useFeedStore.setState({ currentUser: updatedUser });
     }
+  },
+
+  uploadAvatar: async (uri) => {
+    const serverUser = await imageService.uploadAvatar(uri);
+    const updatedUser = { ...get().user, ...serverUser } as User;
+
+    set({ user: updatedUser });
+    await secureStorage.saveUser(updatedUser);
+
+    // Reflete a nova foto no perfil e nos posts já carregados; os demais usuários
+    // recebem a URL nova pelo autor dos posts na próxima revalidação do feed
+    useFeedStore.setState((state) => ({
+      currentUser: updatedUser,
+      posts: state.posts.map((post) =>
+        post.authorId === updatedUser.id
+          ? { ...post, author: { ...post.author, avatarUrl: updatedUser.avatarUrl } }
+          : post
+      ),
+    }));
+
+    return updatedUser;
   },
 
   logout: async () => {

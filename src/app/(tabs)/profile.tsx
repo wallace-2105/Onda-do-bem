@@ -12,13 +12,18 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 
 import { useAppTheme } from '@/hooks/use-theme';
 import { useFeedStore } from '@/store/feed.store';
+import { useAuthStore } from '@/store/auth.store';
+import { showAlert } from '@/utils/platform';
+import { normalizeError } from '@/utils/error-handler';
 import { Avatar } from '@/components/ui/avatar';
 import { AppText } from '@/components/ui/text';
 import { PostCard } from '@/components/feed/post-card';
@@ -32,6 +37,42 @@ export default function ProfileScreen() {
 
   const { currentUser, posts, toggleLike } = useFeedStore();
   const [activeTab, setActiveTab] = useState<'actions' | 'ranking' | 'badges'>('actions');
+
+  const authUser = useAuthStore((s) => s.user);
+  const uploadAvatar = useAuthStore((s) => s.uploadAvatar);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
+  // Troca a foto de perfil: salva no Supabase Storage via backend, visível para todos
+  const handleChangeAvatar = async () => {
+    if (!authUser) {
+      showAlert('Entre para trocar sua foto', 'Faça login ou crie sua conta para personalizar seu perfil.');
+      router.push({ pathname: '/login', params: { mode: 'login' } });
+      return;
+    }
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      showAlert('Permissão Necessária', 'Precisamos de acesso à sua galeria para escolher a foto de perfil.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (result.canceled || !result.assets?.length) return;
+
+    try {
+      setIsUploadingAvatar(true);
+      await uploadAvatar(result.assets[0].uri);
+    } catch (error) {
+      showAlert('Não foi possível trocar a foto', normalizeError(error).message);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
 
   // Posts criados pelo usuário logado
   const myPosts = useMemo(() => {
@@ -108,12 +149,22 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Profile Card Header */}
         <View style={[styles.profileHeaderCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <Avatar
-            source={currentUser.avatarUrl}
-            name={currentUser.displayName}
-            size="xl"
-            style={styles.avatar}
-          />
+          <Pressable
+            onPress={handleChangeAvatar}
+            disabled={isUploadingAvatar}
+            style={({ pressed }) => [styles.avatar, pressed && { opacity: 0.8 }]}
+            accessibilityLabel="Trocar foto de perfil"
+          >
+            <Avatar source={currentUser.avatarUrl} name={currentUser.displayName} size="xl" />
+            {isUploadingAvatar && (
+              <View style={styles.avatarLoadingOverlay}>
+                <ActivityIndicator color="#FFFFFF" />
+              </View>
+            )}
+            <View style={[styles.avatarEditBadge, { backgroundColor: theme.primary, borderColor: theme.surface }]}>
+              <Ionicons name="camera" size={14} color="#FFFFFF" />
+            </View>
+          </Pressable>
           <AppText variant="h2" weight="bold" style={styles.displayName}>
             {currentUser.displayName}
           </AppText>
@@ -523,6 +574,25 @@ const styles = StyleSheet.create({
   },
   avatar: {
     marginBottom: Spacing.sm,
+    position: 'relative',
+  },
+  avatarLoadingOverlay: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: BorderRadius.full,
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarEditBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   displayName: {
     marginTop: Spacing.xs,

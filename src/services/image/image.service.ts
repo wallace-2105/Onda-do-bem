@@ -9,6 +9,7 @@ import { Platform } from 'react-native';
 
 import { apiClient, Endpoints } from '@/services/api';
 import type { ApiResponse } from '@/types/api';
+import type { User } from '@/types/entities';
 
 // URIs que só existem no dispositivo/aba que escolheu a foto
 const LOCAL_URI_PATTERN = /^(blob:|file:|content:|ph:|assets-library:|data:)/i;
@@ -35,23 +36,33 @@ export const imageService = {
 
   /** Faz upload de uma imagem local e retorna a URL pública no Supabase Storage */
   async uploadImage(uri: string): Promise<string> {
-    const form = new FormData();
+    const response = await postImage<{ url: string }>(Endpoints.upload.image, uri);
+    return response.url;
+  },
 
-    if (Platform.OS === 'web') {
-      // Na web o picker retorna `blob:` — lê o arquivo real antes de enviar
-      const blob = await (await fetch(uri)).blob();
-      const extension = blob.type.split('/')[1] || 'jpg';
-      form.append('file', blob, `upload.${extension}`);
-    } else {
-      const type = guessMimeType(uri);
-      form.append('file', { uri, name: `upload.${type.split('/')[1]}`, type } as unknown as Blob);
-    }
-
-    // O Content-Type JSON padrão do client faria o axios serializar o FormData como JSON;
-    // com multipart o axios deixa o browser/RN definir o boundary.
-    const response = await apiClient.post<ApiResponse<{ url: string }>>(Endpoints.upload.image, form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data.data.url;
+  /** Envia a nova foto de perfil e retorna o usuário atualizado (avatarUrl público) */
+  async uploadAvatar(uri: string): Promise<User> {
+    return postImage<User>(Endpoints.users.avatar, uri);
   },
 };
+
+async function postImage<T>(url: string, uri: string): Promise<T> {
+  const form = new FormData();
+
+  if (Platform.OS === 'web') {
+    // Na web o picker retorna `blob:` — lê o arquivo real antes de enviar
+    const blob = await (await fetch(uri)).blob();
+    const extension = blob.type.split('/')[1] || 'jpg';
+    form.append('file', blob, `upload.${extension}`);
+  } else {
+    const type = guessMimeType(uri);
+    form.append('file', { uri, name: `upload.${type.split('/')[1]}`, type } as unknown as Blob);
+  }
+
+  // O Content-Type JSON padrão do client faria o axios serializar o FormData como JSON;
+  // com multipart o axios deixa o browser/RN definir o boundary.
+  const response = await apiClient.post<ApiResponse<T>>(url, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data.data;
+}

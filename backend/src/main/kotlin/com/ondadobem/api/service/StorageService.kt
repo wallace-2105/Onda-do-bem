@@ -36,7 +36,8 @@ class StorageService(
     private val bucket get() = supabaseProperties.storageBucket
     private val isConfigured get() = supabaseProperties.url.isNotBlank() && supabaseProperties.serviceRoleKey.isNotBlank()
 
-    fun uploadPostImage(file: MultipartFile, userId: UUID): String {
+    /** Envia a imagem para `<folder>/<ownerId>/<uuid>.<ext>` e retorna a URL pública. */
+    fun uploadImage(file: MultipartFile, folder: String, ownerId: UUID): String {
         if (!isConfigured) {
             throw ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Armazenamento de imagens não configurado no servidor")
         }
@@ -48,7 +49,7 @@ class StorageService(
         val extension = allowedImageTypes[contentType]
             ?: throw ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Formato de imagem não suportado. Use JPG, PNG, WEBP ou GIF.")
 
-        val objectPath = "posts/$userId/${UUID.randomUUID()}.$extension"
+        val objectPath = "$folder/$ownerId/${UUID.randomUUID()}.$extension"
 
         try {
             restClient.post()

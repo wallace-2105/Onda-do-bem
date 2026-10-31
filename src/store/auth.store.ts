@@ -252,6 +252,8 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
     } finally {
       await secureStorage.clearTokens();
       await secureStorage.clearUser();
+      // Não mantém dados do usuário anterior no feed (persistido no AsyncStorage)
+      useFeedStore.setState({ currentUser: useFeedStore.getInitialState().currentUser });
       set({
         user: null,
         accessToken: null,

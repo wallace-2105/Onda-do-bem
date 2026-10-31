@@ -26,6 +26,7 @@ import { showAlert } from '@/utils/platform';
 import { normalizeError } from '@/utils/error-handler';
 import { Avatar } from '@/components/ui/avatar';
 import { AppText } from '@/components/ui/text';
+import { AppButton } from '@/components/ui/button';
 import { PostCard } from '@/components/feed/post-card';
 import { Spacing, BorderRadius, Shadows, FontWeight } from '@/constants/theme';
 import { calculateUserRank, getCommunityLeaderboard, RANK_TIERS } from '@/utils/rank';
@@ -129,6 +130,56 @@ export default function ProfileScreen() {
       color: '#EC4899',
     },
   ];
+
+  // Convidado: o currentUser do feed pode ser de uma sessão anterior, então não exibimos dados dele
+  if (!authUser) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
+        <View style={[styles.topBar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+          <AppText variant="h3" weight="bold">
+            Meu Perfil
+          </AppText>
+          <Pressable onPress={() => router.push('/settings')} style={styles.settingsIcon} hitSlop={8}>
+            <Ionicons name="settings-outline" size={22} color={theme.text} />
+          </Pressable>
+        </View>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          <View style={[styles.profileHeaderCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={[styles.guestAvatar, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+              <Ionicons name="person" size={40} color={theme.textMuted} />
+            </View>
+            <AppText variant="h2" weight="bold" style={styles.displayName}>
+              Visitante
+            </AppText>
+            <AppText variant="bodySm" color="secondary" center style={styles.bio}>
+              Entre ou crie sua conta para ter seu perfil, publicar suas ações do bem, acompanhar
+              seu impacto e subir no ranking da comunidade. 🌊
+            </AppText>
+
+            <View style={styles.guestActions}>
+              <AppButton
+                title="Entrar"
+                variant="primary"
+                size="lg"
+                fullWidth
+                leftIcon={<Ionicons name="log-in-outline" size={18} color="#FFFFFF" />}
+                onPress={() => router.push({ pathname: '/login', params: { mode: 'login' } })}
+              />
+              <AppButton
+                title="Cadastre-se"
+                variant="outline"
+                size="lg"
+                fullWidth
+                leftIcon={<Ionicons name="person-add-outline" size={18} color={theme.primary} />}
+                onPress={() => router.push({ pathname: '/login', params: { mode: 'register' } })}
+              />
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
@@ -575,6 +626,20 @@ const styles = StyleSheet.create({
   avatar: {
     marginBottom: Spacing.sm,
     position: 'relative',
+  },
+  guestAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+  },
+  guestActions: {
+    width: '100%',
+    gap: Spacing.sm,
+    marginTop: Spacing.lg,
   },
   avatarLoadingOverlay: {
     ...StyleSheet.absoluteFill,

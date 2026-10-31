@@ -18,9 +18,10 @@ const message = process.argv.slice(2).join(" ") || "Atualização do app";
 
 console.log(`EXPO_PUBLIC_API_URL=${env.EXPO_PUBLIC_API_URL}`);
 
+// npx funciona mesmo sem o eas-cli instalado globalmente
 const result = spawnSync(
-  "eas",
-  ["update", "--branch", "preview", "--message", JSON.stringify(message)],
+  "npx",
+  ["--yes", "eas-cli", "update", "--branch", "preview", "--message", JSON.stringify(message)],
   { stdio: "inherit", env, shell: true }
 );
 

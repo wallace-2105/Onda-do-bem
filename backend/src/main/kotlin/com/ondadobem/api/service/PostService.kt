@@ -57,6 +57,19 @@ class PostService(
         return PaginatedResponse(data = postResponses, meta = meta)
     }
 
+    /** Stories: a publicação mais recente de cada usuário que já postou */
+    @Transactional(readOnly = true)
+    fun getStories(limit: Int, currentUserId: UUID?): List<PostResponse> {
+        val pageSize = if (limit in 1..200) limit else 100
+        return postRepository.findLatestPostPerAuthor(PageRequest.of(0, pageSize))
+            .distinctBy { it.author.id }
+            .map { post ->
+                val isLiked = currentUserId != null &&
+                    likeRepository.existsByUserIdAndPostId(currentUserId, post.id)
+                PostResponse.fromEntity(post, isLiked)
+            }
+    }
+
     @Transactional(readOnly = true)
     fun getPostById(postId: UUID, currentUserId: UUID?): PostResponse {
         val post = postRepository.findById(postId)

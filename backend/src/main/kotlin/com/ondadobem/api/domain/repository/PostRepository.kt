@@ -29,5 +29,17 @@ interface PostRepository : JpaRepository<PostEntity, UUID> {
         pageable: Pageable
     ): Page<PostEntity>
 
+    /** Última publicação de cada autor, da mais recente para a mais antiga (barra de stories) */
+    @Query(
+        """
+        SELECT p FROM PostEntity p
+        WHERE p.createdAt = (
+            SELECT MAX(p2.createdAt) FROM PostEntity p2 WHERE p2.author = p.author
+        )
+        ORDER BY p.createdAt DESC
+        """
+    )
+    fun findLatestPostPerAuthor(pageable: Pageable): List<PostEntity>
+
     fun findAllByAuthorIdOrderByCreatedAtDesc(authorId: UUID, pageable: Pageable): Page<PostEntity>
 }

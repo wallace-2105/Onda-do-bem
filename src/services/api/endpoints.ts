@@ -17,6 +17,8 @@ export const Endpoints = {
   },
   posts: {
     list: '/posts',
+    /** Última publicação de cada usuário (barra de stories) */
+    stories: '/posts/stories',
     detail: (id: string) => `/posts/${id}`,
     create: '/posts',
     update: (id: string) => `/posts/${id}`,

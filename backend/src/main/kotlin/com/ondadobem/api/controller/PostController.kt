@@ -29,6 +29,15 @@ class PostController(
         return ResponseEntity.ok(result)
     }
 
+    @GetMapping("/stories")
+    fun getStories(
+        @RequestParam(defaultValue = "100") limit: Int,
+        @AuthenticationPrincipal principal: UserPrincipal?
+    ): ResponseEntity<ApiResponse<List<PostResponse>>> {
+        val stories = postService.getStories(limit, principal?.id)
+        return ResponseEntity.ok(ApiResponse(data = stories))
+    }
+
     @GetMapping("/{id}")
     fun getPostById(
         @PathVariable id: UUID,

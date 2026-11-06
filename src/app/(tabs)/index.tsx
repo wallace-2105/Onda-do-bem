@@ -103,6 +103,7 @@ export default function FeedScreen() {
 
   const {
     posts,
+    stories,
     isRefreshing,
     selectedCategory,
     toggleLike,
@@ -115,6 +116,22 @@ export default function FeedScreen() {
     if (selectedCategory === 'ALL') return posts;
     return posts.filter((post) => post.category === selectedCategory);
   }, [posts, selectedCategory]);
+
+  // Stories: última publicação de cada usuário. Junta a lista do servidor com os posts
+  // do próprio usuário já carregados, para que uma ação recém-publicada apareça na hora
+  const storyPosts = useMemo(() => {
+    const ownPosts = user ? posts.filter((post) => post.authorId === user.id) : [];
+    const latestByAuthor = new Map<string, Post>();
+    for (const post of [...stories, ...ownPosts]) {
+      const current = latestByAuthor.get(post.authorId);
+      if (!current || new Date(post.createdAt) > new Date(current.createdAt)) {
+        latestByAuthor.set(post.authorId, post);
+      }
+    }
+    return [...latestByAuthor.values()].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }, [stories, posts, user]);
 
   // Revalida o feed ao focar a tela e periodicamente enquanto ela está visível,
   // para que publicações feitas em outros dispositivos apareçam sem recarregar a página
@@ -130,9 +147,10 @@ export default function FeedScreen() {
     <View style={styles.headerComponent}>
       {/* Barra de Stories / Ações em destaque */}
       <ImpactStories
-        onStoryPress={() => {
-          // Ação ao clicar no story: redireciona para criar ou ver
-        }}
+        user={user}
+        stories={storyPosts}
+        onCreatePress={() => router.push('/create')}
+        onGuestPress={() => setAuthModalVisible(true)}
       />
 
       {/* Chips de Categorias */}

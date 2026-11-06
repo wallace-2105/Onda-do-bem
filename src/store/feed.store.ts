@@ -34,6 +34,8 @@ interface CreatePostInput {
 
 interface FeedState {
   posts: Post[];
+  /** Última publicação de cada usuário que já postou (barra de stories) */
+  stories: Post[];
   currentUser: User;
   isRefreshing: boolean;
   /** Motivo da última falha ao enviar uma publicação ao backend (null se sincronizou) */
@@ -72,6 +74,7 @@ export const useFeedStore = create<FeedState>()(
   persist(
     (set) => ({
       posts: hydratedInitialPosts,
+      stories: [],
       currentUser: initialCurrentUser,
       isRefreshing: false,
       lastSyncError: null,
@@ -327,7 +330,18 @@ export const useFeedStore = create<FeedState>()(
         const silent = options?.silent === true;
         if (!silent) set({ isRefreshing: true });
         try {
-          const response = await apiGet<PaginatedResponse<Post>>(Endpoints.posts.list);
+          const [feedResult, storiesResult] = await Promise.allSettled([
+            apiGet<PaginatedResponse<Post>>(Endpoints.posts.list),
+            apiGet<ApiResponse<Post[]>>(Endpoints.posts.stories),
+          ]);
+
+          // Stories são complementares: uma falha aqui não derruba o feed
+          if (storiesResult.status === 'fulfilled' && Array.isArray(storiesResult.value?.data)) {
+            set({ stories: storiesResult.value.data });
+          }
+
+          if (feedResult.status === 'rejected') throw feedResult.reason;
+          const response = feedResult.value;
           if (response?.data && Array.isArray(response.data) && response.data.length > 0) {
             set({ posts: response.data });
           }
@@ -357,7 +371,11 @@ export const useFeedStore = create<FeedState>()(
     {
       name: '@onda_do_bem:feed',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({ posts: state.posts, currentUser: state.currentUser }),
+      partialize: (state) => ({
+        posts: state.posts,
+        stories: state.stories,
+        currentUser: state.currentUser,
+      }),
       merge: (persistedState: any, currentState: FeedState) => {
         if (persistedState && Array.isArray(persistedState.posts)) {
           const persistedIds = new Set(persistedState.posts.map((p: Post) => p.id));

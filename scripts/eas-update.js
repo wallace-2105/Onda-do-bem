@@ -21,7 +21,18 @@ console.log(`EXPO_PUBLIC_API_URL=${env.EXPO_PUBLIC_API_URL}`);
 // npx funciona mesmo sem o eas-cli instalado globalmente
 const result = spawnSync(
   "npx",
-  ["--yes", "eas-cli", "update", "--branch", "preview", "--message", JSON.stringify(message)],
+  [
+    "--yes",
+    "eas-cli",
+    "update",
+    "--branch",
+    "preview",
+    // Obrigatório quando o EAS roda sem terminal interativo
+    "--environment",
+    "preview",
+    "--message",
+    JSON.stringify(message),
+  ],
   { stdio: "inherit", env, shell: true }
 );
 

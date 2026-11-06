@@ -73,6 +73,28 @@ class StorageService(
         return "$baseUrl/storage/v1/object/public/$bucket/$objectPath"
     }
 
+    /**
+     * Remove do Storage uma imagem enviada pelo app (melhor esforço: falhas só geram log).
+     * URLs externas (Unsplash, assets do app) são ignoradas.
+     */
+    fun deleteByPublicUrl(publicUrl: String?) {
+        if (publicUrl.isNullOrBlank() || !isConfigured) return
+        val prefix = "$baseUrl/storage/v1/object/public/$bucket/"
+        if (!publicUrl.startsWith(prefix)) return
+        val objectPath = publicUrl.removePrefix(prefix)
+
+        try {
+            restClient.delete()
+                .uri("$baseUrl/storage/v1/object/$bucket/$objectPath")
+                .header("Authorization", "Bearer ${supabaseProperties.serviceRoleKey}")
+                .header("apikey", supabaseProperties.serviceRoleKey)
+                .retrieve()
+                .toBodilessEntity()
+        } catch (ex: RestClientException) {
+            log.warn("[Storage] Não foi possível remover {}: {}", objectPath, ex.message)
+        }
+    }
+
     /** Cria o bucket público na inicialização, caso ainda não exista. */
     @EventListener(ApplicationReadyEvent::class)
     fun ensureBucketExists() {

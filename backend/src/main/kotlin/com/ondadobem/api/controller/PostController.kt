@@ -4,6 +4,7 @@ import com.ondadobem.api.config.UserPrincipal
 import com.ondadobem.api.domain.enums.PostCategory
 import com.ondadobem.api.dto.*
 import com.ondadobem.api.service.PostService
+import com.ondadobem.api.service.StorageService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -14,7 +15,8 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/posts")
 class PostController(
-    private val postService: PostService
+    private val postService: PostService,
+    private val storageService: StorageService
 ) {
 
     @GetMapping
@@ -56,6 +58,17 @@ class PostController(
         return ResponseEntity.status(HttpStatus.CREATED).body(
             ApiResponse(data = post, message = "Publicação criada com sucesso!")
         )
+    }
+
+    @DeleteMapping("/{id}")
+    fun deletePost(
+        @PathVariable id: UUID,
+        @AuthenticationPrincipal principal: UserPrincipal
+    ): ResponseEntity<ApiResponse<Unit?>> {
+        val imageUrl = postService.deletePost(id, principal.id)
+        // Após o commit no banco; se falhar, só fica um arquivo órfão no Storage
+        storageService.deleteByPublicUrl(imageUrl)
+        return ResponseEntity.ok(ApiResponse(data = null, message = "Publicação excluída"))
     }
 
     @PostMapping("/{id}/like")

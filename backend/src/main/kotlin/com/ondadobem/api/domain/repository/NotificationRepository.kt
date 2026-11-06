@@ -31,6 +31,11 @@ interface NotificationRepository : JpaRepository<NotificationEntity, UUID> {
     @Query("UPDATE NotificationEntity n SET n.isRead = true WHERE n.recipient.id = :recipientId AND n.isRead = false")
     fun markAllAsRead(@Param("recipientId") recipientId: UUID): Int
 
+    /** Remove todas as notificações ligadas a um post (ao excluir a publicação) */
+    @Modifying
+    @Query("DELETE FROM NotificationEntity n WHERE n.referenceId = :referenceId")
+    fun deleteAllByReferenceId(@Param("referenceId") referenceId: UUID): Int
+
     /** Remove a notificação de curtida quando ela é desfeita (evita duplicadas ao curtir de novo) */
     @Modifying
     @Query(

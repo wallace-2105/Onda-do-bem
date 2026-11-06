@@ -15,7 +15,7 @@ import type { ApiResponse, PaginatedResponse } from '@/types/api';
 import { INITIAL_POSTS, CURRENT_USER } from '@/constants/mock-data';
 import { calculateUserRank, IMPACT_PER_LIKE, IMPACT_PER_POST } from '@/utils/rank';
 import { normalizeError } from '@/utils/error-handler';
-import { apiGet, apiPost, Endpoints } from '@/services/api';
+import { apiDelete, apiGet, apiPost, Endpoints } from '@/services/api';
 import { imageService, isLocalImageUri } from '@/services/image/image.service';
 
 interface CreatePostInput {
@@ -42,6 +42,8 @@ interface FeedState {
   toggleLike: (postId: string) => void;
   addPost: (input: CreatePostInput) => Promise<Post>;
   addComment: (postId: string, content: string) => void;
+  /** Exclui uma publicação do usuário logado (servidor + feed + pontos) */
+  deletePost: (postId: string) => Promise<void>;
   /** `silent` não liga o indicador de pull-to-refresh (usado na revalidação periódica) */
   refreshFeed: (options?: { silent?: boolean }) => Promise<void>;
   setSelectedCategory: (category: PostCategory | 'ALL') => void;
@@ -271,6 +273,43 @@ export const useFeedStore = create<FeedState>()(
             }),
           };
         });
+      },
+
+      deletePost: async (postId) => {
+        const target = useFeedStore.getState().posts.find((p) => p.id === postId);
+
+        // Posts com id `post-*` só existem neste aparelho; os demais precisam sair do servidor.
+        // Só remove da tela depois que o servidor confirmar, para não "sumir e voltar".
+        if (!postId.startsWith('post-')) {
+          await apiDelete(Endpoints.posts.delete(postId));
+        }
+
+        set((state) => {
+          let currentUser = state.currentUser;
+          if (target && target.authorId === state.currentUser.id) {
+            // Desfaz os pontos que a publicação rendeu: valor fixo + curtidas de outros usuários
+            const likesFromOthers = Math.max(0, target.likesCount - (target.isLiked ? 1 : 0));
+            const lost = IMPACT_PER_POST + IMPACT_PER_LIKE * likesFromOthers;
+            const totalImpact = Math.max(0, (currentUser.totalImpact || 0) - lost);
+            const rankInfo = calculateUserRank(totalImpact);
+            currentUser = {
+              ...currentUser,
+              totalImpact,
+              totalActions: Math.max(0, (currentUser.totalActions || 0) - 1),
+              rank: rankInfo.rank,
+              rankTitle: rankInfo.title,
+            };
+          }
+
+          return {
+            posts: state.posts.filter((p) => p.id !== postId),
+            stories: state.stories.filter((p) => p.id !== postId),
+            currentUser,
+          };
+        });
+
+        // Os stories mostram a última ação de cada usuário: busca a anterior, se houver
+        useFeedStore.getState().refreshFeed({ silent: true }).catch(() => {});
       },
 
       refreshFeed: async (options) => {

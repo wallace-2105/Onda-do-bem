@@ -14,6 +14,7 @@ import {
   Share,
   TextInput,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,11 +32,17 @@ import { calculateUserRank } from '@/utils/rank';
 interface PostCardProps {
   post: Post;
   onToggleLike: (postId: string) => void;
+  /** Quando informado, exibe o botão de excluir (usado nas publicações do próprio usuário) */
+  onDelete?: (post: Post) => void;
+  /** Exclusão em andamento: desabilita o botão e mostra carregando */
+  isDeleting?: boolean;
 }
 
-export function PostCard({ post, onToggleLike }: PostCardProps) {
+export function PostCard({ post, onToggleLike, onDelete, isDeleting = false }: PostCardProps) {
   const theme = useAppTheme();
   const addComment = useFeedStore((s) => s.addComment);
+  const currentUserId = useFeedStore((s) => s.currentUser.id);
+  const isOwnPost = post.authorId === currentUserId;
   const [commentOpen, setCommentOpen] = useState(false);
   const [newCommentText, setNewCommentText] = useState('');
 
@@ -72,8 +79,8 @@ export function PostCard({ post, onToggleLike }: PostCardProps) {
       Animated.spring(heartScale, { toValue: 1, friction: 4, useNativeDriver: true }),
     ]).start();
 
-    // Feedback visual quando curte: "+2 Impacto! ⭐"
-    if (willBeLiked) {
+    // Feedback visual quando curte: "+2 Impacto! ⭐" (curtir o próprio post não rende pontos)
+    if (willBeLiked && !isOwnPost) {
       setShowImpactToast(true);
       floatAnim.setValue(0);
       Animated.timing(floatAnim, {
@@ -267,13 +274,31 @@ export function PostCard({ post, onToggleLike }: PostCardProps) {
           </Pressable>
         </View>
 
-        <Pressable
-          onPress={handleShare}
-          style={({ pressed }) => [styles.actionButton, pressed && styles.actionPressed]}
-          hitSlop={8}
-        >
-          <Ionicons name="share-social-outline" size={22} color={theme.textSecondary} />
-        </Pressable>
+        <View style={styles.leftActions}>
+          {onDelete && (
+            <Pressable
+              onPress={() => onDelete(post)}
+              disabled={isDeleting}
+              style={({ pressed }) => [styles.actionButton, pressed && styles.actionPressed]}
+              hitSlop={8}
+              accessibilityLabel="Excluir publicação"
+            >
+              {isDeleting ? (
+                <ActivityIndicator size="small" color="#EF4444" />
+              ) : (
+                <Ionicons name="trash-outline" size={21} color="#EF4444" />
+              )}
+            </Pressable>
+          )}
+          <Pressable
+            onPress={handleShare}
+            style={({ pressed }) => [styles.actionButton, pressed && styles.actionPressed]}
+            hitSlop={8}
+            accessibilityLabel="Compartilhar publicação"
+          >
+            <Ionicons name="share-social-outline" size={22} color={theme.textSecondary} />
+          </Pressable>
+        </View>
       </View>
 
       {/* Botão rápido para ver comentários quando fechado */}

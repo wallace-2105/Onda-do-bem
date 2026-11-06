@@ -22,7 +22,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAppTheme } from '@/hooks/use-theme';
 import { useFeedStore } from '@/store/feed.store';
 import { useAuthStore } from '@/store/auth.store';
-import { showAlert } from '@/utils/platform';
+import { confirmAction, showAlert } from '@/utils/platform';
+import type { Post } from '@/types/entities';
 import { normalizeError } from '@/utils/error-handler';
 import { Avatar } from '@/components/ui/avatar';
 import { AppText } from '@/components/ui/text';
@@ -42,7 +43,8 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const { currentUser, posts, toggleLike } = useFeedStore();
+  const { currentUser, posts, toggleLike, deletePost } = useFeedStore();
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'actions' | 'ranking' | 'badges'>('actions');
 
   const authUser = useAuthStore((s) => s.user);
@@ -78,6 +80,30 @@ export default function ProfileScreen() {
       showAlert('Não foi possível trocar a foto', normalizeError(error).message);
     } finally {
       setIsUploadingAvatar(false);
+    }
+  };
+
+  // Exclui uma publicação própria após confirmação
+  const handleDeletePost = async (post: Post) => {
+    if (deletingPostId) return;
+
+    const likesFromOthers = Math.max(0, post.likesCount - (post.isLiked ? 1 : 0));
+    const pointsLost = IMPACT_PER_POST + IMPACT_PER_LIKE * likesFromOthers;
+    const confirmed = await confirmAction(
+      'Excluir publicação?',
+      `"${post.title}" será apagada para todos, junto com as curtidas e comentários. ` +
+        `Você perde ${pointsLost} pts de impacto. Essa ação não pode ser desfeita.`,
+      'Excluir'
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeletingPostId(post.id);
+      await deletePost(post.id);
+    } catch (error) {
+      showAlert('Não foi possível excluir', normalizeError(error).message);
+    } finally {
+      setDeletingPostId(null);
     }
   };
 
@@ -405,7 +431,13 @@ export default function ProfileScreen() {
         {activeTab === 'actions' && (
           myPosts.length > 0 ? (
             myPosts.map((post) => (
-              <PostCard key={post.id} post={post} onToggleLike={toggleLike} />
+              <PostCard
+                key={post.id}
+                post={post}
+                onToggleLike={toggleLike}
+                onDelete={handleDeletePost}
+                isDeleting={deletingPostId === post.id}
+              />
             ))
           ) : (
             <View style={styles.emptyState}>

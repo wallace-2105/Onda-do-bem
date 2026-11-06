@@ -130,6 +130,38 @@ class PostService(
         return PostResponse.fromEntity(savedPost, isLiked = false)
     }
 
+    /**
+     * Exclui uma publicação do próprio usuário junto com curtidas, comentários,
+     * métricas e notificações, e desfaz os pontos que ela rendeu ao autor.
+     * Retorna a URL da imagem para que o chamador a remova do Storage após o commit.
+     */
+    @Transactional
+    fun deletePost(postId: UUID, currentUserId: UUID): String? {
+        val post = postRepository.findById(postId)
+            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Publicação não encontrada") }
+
+        val author = post.author
+        if (author.id != currentUserId) {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN, "Você só pode excluir as suas publicações")
+        }
+
+        val receivedLikes = likeRepository.countReceivedLikes(postId, author.id)
+        val imageUrl = post.imageUrl
+
+        notificationService.removeAllForPost(postId)
+        likeRepository.deleteAllByPostId(postId)
+        commentRepository.deleteAllByPostId(postId)
+        impactRepository.deleteAllByPostId(postId)
+        postRepository.delete(post)
+
+        val pointsLost = ImpactRules.POINTS_PER_POST + ImpactRules.POINTS_PER_LIKE * receivedLikes.toInt()
+        author.totalActions = (author.totalActions - 1).coerceAtLeast(0)
+        author.totalImpact = (author.totalImpact - pointsLost).coerceAtLeast(0)
+        userRepository.save(author)
+
+        return imageUrl
+    }
+
     @Transactional
     fun toggleLike(postId: UUID, currentUserId: UUID): LikeResponse {
         val post = postRepository.findById(postId)

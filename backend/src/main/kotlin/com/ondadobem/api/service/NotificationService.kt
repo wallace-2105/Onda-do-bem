@@ -70,6 +70,12 @@ class NotificationService(
         notificationRepository.deleteBySenderAndReference(sender.id, post.id, NotificationType.LIKE)
     }
 
+    /** Post excluído: suas notificações deixam de fazer sentido */
+    @Transactional
+    fun removeAllForPost(postId: UUID) {
+        notificationRepository.deleteAllByReferenceId(postId)
+    }
+
     /** Comentário: avisa o autor do post (nunca a si mesmo) */
     @Transactional
     fun notifyComment(sender: UserEntity, post: PostEntity, content: String) {

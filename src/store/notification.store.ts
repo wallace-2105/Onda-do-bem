@@ -1,13 +1,17 @@
 /**
  * Onda do Bem — Notification Store (Zustand)
  *
- * Gerencia notificações de impacto e interações sociais (curtidas, comentários).
- * Fornece estado para o popup discreto animado disparado a partir do botão
- * de notificações existente na barra superior.
+ * Notificações reais vindas do backend (curtidas e comentários nas publicações
+ * do usuário logado). O app consulta a API periodicamente; quando chega uma
+ * notificação nova, exibe o popup discreto no topo e balança o sino.
  */
 
 import { create } from 'zustand';
+
 import { type Notification, NotificationType } from '@/types/entities';
+import type { ApiResponse } from '@/types/api';
+import { apiGet, apiPatch, Endpoints } from '@/services/api';
+import { tokenRegistry } from '@/services/api/token-registry';
 
 export interface ToastNotification {
   id: string;
@@ -15,9 +19,13 @@ export interface ToastNotification {
   body: string;
   senderName: string;
   senderAvatar: string | null;
-  postTitle?: string;
   type: NotificationType;
   createdAt: string;
+}
+
+interface NotificationListPayload {
+  notifications: Notification[];
+  unreadCount: number;
 }
 
 interface NotificationState {
@@ -25,14 +33,11 @@ interface NotificationState {
   unreadCount: number;
   activeToast: ToastNotification | null;
   bellShakeTrigger: number;
+  /** Se já houve a primeira carga (a primeira não gera popup para notificações antigas) */
+  hasLoaded: boolean;
 
-  /** Dispara uma notificação de curtida e exibe o popup discreto no topo */
-  triggerLikeNotification: (params?: {
-    senderName?: string;
-    senderAvatar?: string | null;
-    postTitle?: string;
-    postId?: string;
-  }) => void;
+  /** Busca as notificações do usuário logado e avisa sobre as novas */
+  fetchNotifications: () => Promise<void>;
 
   /** Exibe manualmente um toast */
   showToast: (toast: ToastNotification) => void;
@@ -46,145 +51,74 @@ interface NotificationState {
   /** Marca uma notificação individual como lida */
   markAsRead: (id: string) => void;
 
-  /** Limpa todas as notificações */
+  /** Limpa tudo (logout / troca de conta) */
   clearNotifications: () => void;
 }
 
-const INITIAL_NOTIFICATIONS: Notification[] = [
-  {
-    id: 'notif-1',
-    recipientId: 'u1',
-    senderId: 'u2',
-    sender: {
-      id: 'u2',
-      displayName: 'Marina Costa',
-      username: 'marina.eco',
-      email: 'marina.costa@ondadobem.org',
-      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop',
-      bio: 'Bióloga marinha',
-      location: 'Rio de Janeiro, RJ',
-      totalActions: 28,
-      totalImpact: 890,
-      rank: 5,
-      rankTitle: 'Líder Sustentável',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    type: NotificationType.LIKE,
-    title: 'Nova curtida',
-    body: 'Marina Costa curtiu sua ação "Mutirão de Limpeza na Praia Mole" (+2 de impacto)!',
-    referenceId: 'post-1',
-    referenceType: 'POST',
-    isRead: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(), // há 12 min
-  },
-  {
-    id: 'notif-2',
-    recipientId: 'u1',
-    senderId: 'u3',
-    sender: {
-      id: 'u3',
-      displayName: 'Pedro Almeida',
-      username: 'pedro.almeida',
-      email: 'pedro.almeida@ondadobem.org',
-      avatarUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&auto=format&fit=crop',
-      bio: 'Engenheiro ambiental',
-      location: 'Curitiba, PR',
-      totalActions: 12,
-      totalImpact: 310,
-      rank: 3,
-      rankTitle: 'Semeador do Futuro',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    type: NotificationType.COMMENT,
-    title: 'Novo comentário',
-    body: 'Pedro Almeida comentou: "No próximo mutirão podem contar comigo com certeza!"',
-    referenceId: 'post-1',
-    referenceType: 'POST',
-    isRead: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-  },
-  {
-    id: 'notif-3',
-    recipientId: 'u1',
-    senderId: null,
-    sender: null,
-    type: NotificationType.IMPACT_MILESTONE,
-    title: 'Conquista Ecológica! 🌊',
-    body: 'Você atingiu 420 pontos de impacto e agora é Guardião da Terra (Nível 4)!',
-    referenceId: null,
-    referenceType: 'MILESTONE',
-    isRead: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-  },
-];
+const TOAST_DURATION_MS = 4200;
 
-let toastTimer: any = null;
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
+/** Incrementado ao limpar, para descartar respostas de uma sessão anterior */
+let sessionGeneration = 0;
+let fetchInFlight: Promise<void> | null = null;
+
+function toToast(notification: Notification): ToastNotification {
+  return {
+    id: notification.id,
+    title: notification.title,
+    body: notification.body,
+    senderName: notification.sender?.displayName ?? 'Onda do Bem',
+    senderAvatar: notification.sender?.avatarUrl ?? null,
+    type: notification.type,
+    createdAt: notification.createdAt,
+  };
+}
 
 export const useNotificationStore = create<NotificationState>()((set, get) => ({
-  notifications: INITIAL_NOTIFICATIONS,
-  unreadCount: INITIAL_NOTIFICATIONS.filter((n) => !n.isRead).length,
+  notifications: [],
+  unreadCount: 0,
   activeToast: null,
   bellShakeTrigger: 0,
+  hasLoaded: false,
 
-  triggerLikeNotification: (params) => {
-    const senderName = params?.senderName || 'Marina Costa';
-    const senderAvatar =
-      params?.senderAvatar ||
-      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop';
-    const postTitle = params?.postTitle || 'sua publicação';
+  fetchNotifications: () => {
+    // Convidado não tem notificações
+    if (!tokenRegistry.getAccessToken()) return Promise.resolve();
+    // Evita requisições sobrepostas (polling + volta ao app ao mesmo tempo)
+    if (fetchInFlight) return fetchInFlight;
 
-    const newNotification: Notification = {
-      id: 'like-' + Date.now(),
-      recipientId: 'current-user',
-      senderId: 'user-sender',
-      sender: {
-        id: 'user-sender',
-        displayName: senderName,
-        username: senderName.toLowerCase().replace(/\s+/g, '.'),
-        email: `${senderName.toLowerCase().replace(/\s+/g, '.')}@ondadobem.org`,
-        avatarUrl: senderAvatar,
-        bio: 'Membro ativo da rede de impacto',
-        location: 'Brasil',
-        totalActions: 10,
-        totalImpact: 150,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      type: NotificationType.LIKE,
-      title: 'Nova curtida recebida!',
-      body: `${senderName} curtiu "${postTitle}". Você ganhou +2 de impacto ecológico! 🌊`,
-      referenceId: params?.postId || null,
-      referenceType: 'POST',
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    };
+    const generation = sessionGeneration;
 
-    const toast: ToastNotification = {
-      id: newNotification.id,
-      title: 'Nova curtida!',
-      body: `${senderName} curtiu sua ação • +2 Impacto 🌱`,
-      senderName,
-      senderAvatar,
-      postTitle,
-      type: NotificationType.LIKE,
-      createdAt: new Date().toISOString(),
-    };
+    fetchInFlight = (async () => {
+      try {
+        const response = await apiGet<ApiResponse<NotificationListPayload>>(Endpoints.notifications.list);
+        if (generation !== sessionGeneration) return;
 
-    if (toastTimer) clearTimeout(toastTimer);
+        const payload = response?.data;
+        if (!payload || !Array.isArray(payload.notifications)) return;
 
-    set((state) => ({
-      notifications: [newNotification, ...state.notifications],
-      unreadCount: state.unreadCount + 1,
-      activeToast: toast,
-      bellShakeTrigger: state.bellShakeTrigger + 1,
-    }));
+        const { notifications: previous, hasLoaded } = get();
+        const knownIds = new Set(previous.map((n) => n.id));
+        const fresh = payload.notifications.filter((n) => !n.isRead && !knownIds.has(n.id));
 
-    // Auto-esconde o popup discreto após 4.2 segundos
-    toastTimer = setTimeout(() => {
-      set({ activeToast: null });
-    }, 4200);
+        set({
+          notifications: payload.notifications,
+          unreadCount: payload.unreadCount,
+          hasLoaded: true,
+        });
+
+        // Popup só para o que chegou desde a última consulta
+        if (hasLoaded && fresh.length > 0) {
+          get().showToast(toToast(fresh[0]));
+        }
+      } catch {
+        // Offline ou servidor acordando: mantém o que já está na tela
+      } finally {
+        fetchInFlight = null;
+      }
+    })();
+
+    return fetchInFlight;
   },
 
   showToast: (toast) => {
@@ -195,7 +129,7 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
     }));
     toastTimer = setTimeout(() => {
       set({ activeToast: null });
-    }, 4200);
+    }, TOAST_DURATION_MS);
   },
 
   hideToast: () => {
@@ -204,25 +138,28 @@ export const useNotificationStore = create<NotificationState>()((set, get) => ({
   },
 
   markAllAsRead: () => {
+    if (get().unreadCount === 0) return;
     set((state) => ({
       notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
       unreadCount: 0,
     }));
+    apiPatch(Endpoints.notifications.markAllRead).catch(() => {});
   },
 
   markAsRead: (id: string) => {
-    set((state) => {
-      const updated = state.notifications.map((n) =>
-        n.id === id ? { ...n, isRead: true } : n
-      );
-      return {
-        notifications: updated,
-        unreadCount: updated.filter((n) => !n.isRead).length,
-      };
-    });
+    const target = get().notifications.find((n) => n.id === id);
+    if (!target || target.isRead) return;
+
+    set((state) => ({
+      notifications: state.notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
+      unreadCount: Math.max(0, state.unreadCount - 1),
+    }));
+    apiPatch(Endpoints.notifications.markRead(id)).catch(() => {});
   },
 
   clearNotifications: () => {
-    set({ notifications: [], unreadCount: 0, activeToast: null });
+    sessionGeneration += 1;
+    if (toastTimer) clearTimeout(toastTimer);
+    set({ notifications: [], unreadCount: 0, activeToast: null, hasLoaded: false });
   },
 }));

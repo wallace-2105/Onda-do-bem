@@ -25,6 +25,7 @@ import { Image } from 'expo-image';
 import { AppProviders } from '@/providers/app-providers';
 import { useAuthStore } from '@/store/auth.store';
 import { useThemeStore } from '@/store/theme.store';
+import { useNotificationPolling } from '@/hooks/use-notification-polling';
 import { Colors } from '@/constants/theme';
 
 // Prevent native splash screen from auto-hiding immediately
@@ -47,6 +48,9 @@ export default function RootLayout() {
   useEffect(() => {
     initializeAuth();
   }, [initializeAuth]);
+
+  // Notificações reais do usuário logado (curtidas e comentários)
+  useNotificationPolling();
 
   // Sem sessão o usuário entra no feed como convidado; o login fica no botão "Entrar" do topo
 

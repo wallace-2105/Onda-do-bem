@@ -17,7 +17,6 @@ import { calculateUserRank } from '@/utils/rank';
 import { normalizeError } from '@/utils/error-handler';
 import { apiGet, apiPost, Endpoints } from '@/services/api';
 import { imageService, isLocalImageUri } from '@/services/image/image.service';
-import { useNotificationStore } from './notification.store';
 
 interface CreatePostInput {
   title: string;
@@ -165,37 +164,7 @@ export const useFeedStore = create<FeedState>()(
             apiPost(Endpoints.posts.like(postId)).catch(() => {});
           }
 
-          // Dispara notificação com popup discreto no topo quando a postagem for curtida
-          if (isLiked) {
-            if (isCurrentUserAuthor) {
-              useNotificationStore.getState().triggerLikeNotification({
-                senderName: 'Marina Costa',
-                senderAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop',
-                postTitle: targetPost.title,
-                postId: targetPost.id,
-              });
-            } else {
-              // Efeito de reciprocidade comunitária: quando o usuário curte uma ação,
-              // um membro da rede também curte uma publicação do usuário
-              setTimeout(() => {
-                const userPosts = state.posts.filter(
-                  (p) =>
-                    p.authorId === state.currentUser.id ||
-                    p.author?.username === state.currentUser.username
-                );
-                const postToReceiveLike = userPosts[0] || targetPost;
-                useNotificationStore.getState().triggerLikeNotification({
-                  senderName: Math.random() > 0.5 ? 'Marina Costa' : 'Pedro Almeida',
-                  senderAvatar:
-                    Math.random() > 0.5
-                      ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop'
-                      : 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&auto=format&fit=crop',
-                  postTitle: postToReceiveLike.title,
-                  postId: postToReceiveLike.id,
-                });
-              }, 1200);
-            }
-          }
+          // A notificação para o autor é criada pelo backend e chega a ele pelo polling
 
           return {
             posts: updatedPosts,

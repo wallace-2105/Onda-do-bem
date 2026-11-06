@@ -30,7 +30,7 @@ import { PostCard } from '@/components/feed/post-card';
 import { ImpactStories } from '@/components/feed/impact-stories';
 import { CategoryChips } from '@/components/feed/category-chips';
 import { Spacing, BorderRadius, Shadows } from '@/constants/theme';
-import { type Post } from '@/types/entities';
+import { type Post, NotificationType } from '@/types/entities';
 
 const FEED_REVALIDATE_INTERVAL_MS = 20_000;
 
@@ -52,7 +52,7 @@ export default function FeedScreen() {
   const notifications = useNotificationStore((s) => s.notifications);
   const markAllAsRead = useNotificationStore((s) => s.markAllAsRead);
   const markAsRead = useNotificationStore((s) => s.markAsRead);
-  const triggerLikeNotification = useNotificationStore((s) => s.triggerLikeNotification);
+  const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
   const bellShakeTrigger = useNotificationStore((s) => s.bellShakeTrigger);
 
   // Animação de tremor do sino de notificação
@@ -265,7 +265,10 @@ export default function FeedScreen() {
 
           <Pressable
             style={({ pressed }) => [styles.iconBtn, { backgroundColor: theme.surfaceElevated }, pressed && styles.pressed]}
-            onPress={() => setNotificationsModalVisible(true)}
+            onPress={() => {
+              setNotificationsModalVisible(true);
+              fetchNotifications();
+            }}
             accessibilityLabel="Notificações"
           >
             <Animated.View style={{ transform: [{ rotate: bellRotateInterpolate }, { scale: bellScale }] }}>
@@ -325,23 +328,27 @@ export default function FeedScreen() {
                   <Ionicons name="heart" size={16} color="#FFFFFF" />
                 </View>
               )}
-              <View style={styles.toastHeartBadge}>
-                <Ionicons name="heart" size={9} color="#FFFFFF" />
+              <View
+                style={[
+                  styles.toastHeartBadge,
+                  activeToast.type === NotificationType.COMMENT && { backgroundColor: theme.primary },
+                ]}
+              >
+                <Ionicons
+                  name={activeToast.type === NotificationType.COMMENT ? 'chatbubble' : 'heart'}
+                  size={9}
+                  color="#FFFFFF"
+                />
               </View>
             </View>
 
             {/* Conteúdo de Texto Discreto */}
             <View style={styles.toastTextContent}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <AppText variant="caption" weight="bold" style={{ color: theme.text }}>
-                  {activeToast.senderName}
-                </AppText>
-                <AppText variant="caption" color="secondary" style={{ marginLeft: 4 }}>
-                  curtiu sua postagem
-                </AppText>
-              </View>
-              <AppText variant="caption" color="muted" numberOfLines={1} style={{ marginTop: 1 }}>
-                "{activeToast.postTitle || 'sua ação'}" • <AppText variant="caption" weight="bold" style={{ color: '#10B981' }}>+2 Impacto 🌱</AppText>
+              <AppText variant="caption" weight="bold" style={{ color: theme.text }}>
+                {activeToast.title}
+              </AppText>
+              <AppText variant="caption" color="secondary" numberOfLines={2} style={{ marginTop: 1 }}>
+                {activeToast.body}
               </AppText>
             </View>
 
@@ -596,33 +603,32 @@ export default function FeedScreen() {
               </Pressable>
             </View>
 
-            {/* Botão de Teste Rápido de Curtida */}
-            <Pressable
-              style={[styles.testLikeBtn, { backgroundColor: theme.primary + '15', borderColor: theme.primary + '40' }]}
-              onPress={() => {
-                setNotificationsModalVisible(false);
-                setTimeout(() => {
-                  triggerLikeNotification({
-                    senderName: 'Marina Costa',
-                    senderAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop',
-                    postTitle: 'Mutirão de Limpeza na Praia Mole 🌊',
-                  });
-                }, 300);
-              }}
-            >
-              <Ionicons name="heart" size={16} color="#EC4899" />
-              <AppText variant="caption" weight="bold" style={{ color: theme.primary, marginLeft: 6 }}>
-                Simular Curtida de Marina Costa (Testar Popup) ❤️
-              </AppText>
-            </Pressable>
-
             {/* Lista de Notificações */}
             <ScrollView style={{ maxHeight: 380, marginTop: Spacing.sm }} showsVerticalScrollIndicator={false}>
-              {notifications.length === 0 ? (
+              {!user ? (
                 <View style={{ paddingVertical: Spacing.xl, alignItems: 'center' }}>
                   <AppText variant="h2">🔔</AppText>
-                  <AppText variant="bodySm" color="secondary" style={{ marginTop: 6 }}>
-                    Nenhuma notificação no momento.
+                  <AppText variant="bodySm" color="secondary" center style={{ marginTop: 6 }}>
+                    Entre na sua conta para receber avisos de curtidas e comentários nas suas ações.
+                  </AppText>
+                  <Pressable
+                    style={[styles.modalActionBtn, { backgroundColor: theme.primary, marginTop: Spacing.md }]}
+                    onPress={() => {
+                      setNotificationsModalVisible(false);
+                      setAuthModalVisible(true);
+                    }}
+                  >
+                    <Ionicons name="log-in-outline" size={18} color="#FFFFFF" />
+                    <AppText variant="bodySm" weight="bold" style={{ color: '#FFFFFF', marginLeft: 8 }}>
+                      Entrar
+                    </AppText>
+                  </Pressable>
+                </View>
+              ) : notifications.length === 0 ? (
+                <View style={{ paddingVertical: Spacing.xl, alignItems: 'center' }}>
+                  <AppText variant="h2">🔔</AppText>
+                  <AppText variant="bodySm" color="secondary" center style={{ marginTop: 6 }}>
+                    Nenhuma notificação no momento.{'\n'}Quando curtirem ou comentarem suas ações, você verá aqui.
                   </AppText>
                 </View>
               ) : (
@@ -988,16 +994,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: BorderRadius.full,
     marginLeft: 8,
-  },
-  testLikeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    marginTop: Spacing.xs,
   },
   notifItem: {
     flexDirection: 'row',

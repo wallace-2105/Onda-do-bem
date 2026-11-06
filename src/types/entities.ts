@@ -123,12 +123,15 @@ export interface Impact {
   createdAt: string;
 }
 
+/** Dados públicos de quem gerou a notificação */
+export type NotificationSender = Pick<User, 'id' | 'username' | 'displayName' | 'avatarUrl'>;
+
 /** Notificação enviada a um usuário */
 export interface Notification {
   id: string;
   recipientId: string;
   senderId: string | null;
-  sender: User | null;
+  sender: NotificationSender | null;
   type: NotificationType;
   title: string;
   body: string;

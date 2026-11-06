@@ -20,7 +20,8 @@ class PostService(
     private val userRepository: UserRepository,
     private val likeRepository: LikeRepository,
     private val commentRepository: CommentRepository,
-    private val impactRepository: ImpactRepository
+    private val impactRepository: ImpactRepository,
+    private val notificationService: NotificationService
 ) {
 
     @Transactional(readOnly = true)
@@ -141,10 +142,12 @@ class PostService(
 
         val isLiked = if (existingLike.isPresent) {
             likeRepository.delete(existingLike.get())
+            notificationService.removeLike(user, post)
             post.likesCount = (post.likesCount - 1).coerceAtLeast(0)
             false
         } else {
             likeRepository.save(LikeEntity(user = user, post = post))
+            notificationService.notifyLike(user, post)
             post.likesCount += 1
             true
         }
@@ -187,6 +190,7 @@ class PostService(
         )
 
         val savedComment = commentRepository.save(comment)
+        notificationService.notifyComment(author, post, savedComment.content)
 
         post.commentsCount += 1
         postRepository.save(post)

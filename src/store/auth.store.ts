@@ -15,6 +15,7 @@ import { apiPost, apiGet, Endpoints } from '@/services/api';
 import { tokenRegistry } from '@/services/api/token-registry';
 import { imageService } from '@/services/image/image.service';
 import { useFeedStore } from './feed.store';
+import { useNotificationStore } from './notification.store';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -254,6 +255,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
       await secureStorage.clearUser();
       // Não mantém dados do usuário anterior no feed (persistido no AsyncStorage)
       useFeedStore.setState({ currentUser: useFeedStore.getInitialState().currentUser });
+      useNotificationStore.getState().clearNotifications();
       set({
         user: null,
         accessToken: null,

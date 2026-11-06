@@ -13,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { type Post, type Comment, type User, PostCategory } from '@/types/entities';
 import type { ApiResponse, PaginatedResponse } from '@/types/api';
 import { INITIAL_POSTS, CURRENT_USER } from '@/constants/mock-data';
-import { calculateUserRank } from '@/utils/rank';
+import { calculateUserRank, IMPACT_PER_LIKE, IMPACT_PER_POST } from '@/utils/rank';
 import { normalizeError } from '@/utils/error-handler';
 import { apiGet, apiPost, Endpoints } from '@/services/api';
 import { imageService, isLocalImageUri } from '@/services/image/image.service';
@@ -24,7 +24,6 @@ interface CreatePostInput {
   category: PostCategory;
   locationName?: string;
   imageUrl?: string;
-  impactScore?: number;
   latitude?: number | null;
   longitude?: number | null;
   startTime?: string | null;
@@ -85,7 +84,6 @@ export const useFeedStore = create<FeedState>()(
           if (!targetPost) return state;
 
           const isLiked = !targetPost.isLiked;
-          const deltaImpact = isLiked ? 2 : -2;
 
           const authorId = targetPost.authorId;
           const authorUsername = targetPost.author?.username;
@@ -94,23 +92,9 @@ export const useFeedStore = create<FeedState>()(
             authorId === state.currentUser.id ||
             (authorUsername && authorUsername === state.currentUser.username);
 
-          // Atualiza o usuário logado se ele for o autor da postagem curtida
-          let updatedCurrentUser = state.currentUser;
-          if (isCurrentUserAuthor) {
-            const newImpact = Math.max(0, (state.currentUser.totalImpact || 0) + deltaImpact);
-            const newRankInfo = calculateUserRank(newImpact);
-            updatedCurrentUser = {
-              ...state.currentUser,
-              totalImpact: newImpact,
-              rank: newRankInfo.rank,
-              rankTitle: newRankInfo.title,
-            };
-
-            // Sincroniza fallback in-memory do CURRENT_USER
-            CURRENT_USER.totalImpact = newImpact;
-            CURRENT_USER.rank = newRankInfo.rank;
-            CURRENT_USER.rankTitle = newRankInfo.title;
-          }
+          // Curtida de outro usuário vale IMPACT_PER_LIKE para o autor; a própria não conta.
+          // O valor da publicação (IMPACT_PER_POST) é fixo e não muda com curtidas.
+          const deltaImpact = isCurrentUserAuthor ? 0 : isLiked ? IMPACT_PER_LIKE : -IMPACT_PER_LIKE;
 
           // Atualiza todos os posts daquele autor no feed para manter integridade visual
           const updatedPosts = state.posts.map((post) => {
@@ -120,10 +104,8 @@ export const useFeedStore = create<FeedState>()(
               (authorUsername && post.author?.username === authorUsername);
 
             let updatedAuthor = post.author;
-            if (isSameAuthor) {
-              const currentImpact = isCurrentUserAuthor
-                ? updatedCurrentUser.totalImpact
-                : Math.max(0, (post.author?.totalImpact || 0) + deltaImpact);
+            if (isSameAuthor && deltaImpact !== 0) {
+              const currentImpact = Math.max(0, (post.author?.totalImpact || 0) + deltaImpact);
               const rankInfo = calculateUserRank(currentImpact);
 
               updatedAuthor = {
@@ -138,13 +120,11 @@ export const useFeedStore = create<FeedState>()(
               const nextLikesCount = isLiked
                 ? post.likesCount + 1
                 : Math.max(0, post.likesCount - 1);
-              const nextImpactScore = Math.max(0, (post.impactScore || 0) + deltaImpact);
 
               return {
                 ...post,
                 isLiked,
                 likesCount: nextLikesCount,
-                impactScore: nextImpactScore,
                 author: updatedAuthor,
               };
             }
@@ -168,7 +148,6 @@ export const useFeedStore = create<FeedState>()(
 
           return {
             posts: updatedPosts,
-            currentUser: updatedCurrentUser,
           };
         });
       },
@@ -199,7 +178,6 @@ export const useFeedStore = create<FeedState>()(
             locationName,
             latitude,
             longitude,
-            impactValue: input.impactScore || 10,
           });
           savedPost = response.data;
         } catch (error) {
@@ -210,7 +188,7 @@ export const useFeedStore = create<FeedState>()(
 
         let createdPost: Post | null = null;
         set((state) => {
-          const postImpact = input.impactScore || 10;
+          const postImpact = IMPACT_PER_POST;
           const updatedActions = (state.currentUser.totalActions || 0) + 1;
           const updatedImpact = (state.currentUser.totalImpact || 0) + postImpact;
           const updatedRankInfo = calculateUserRank(updatedImpact);
@@ -239,10 +217,10 @@ export const useFeedStore = create<FeedState>()(
             latitude,
             longitude,
             locationName,
-            likesCount: 1,
+            likesCount: savedPost?.likesCount ?? 0,
             commentsCount: 0,
             impactScore: postImpact,
-            isLiked: true,
+            isLiked: false,
             comments: [],
             createdAt: savedPost?.createdAt ?? new Date().toISOString(),
             updatedAt: savedPost?.updatedAt ?? new Date().toISOString(),

@@ -31,6 +31,7 @@ import { Spacing, BorderRadius, FontWeight } from '@/constants/theme';
 import { PostCategory } from '@/types/entities';
 import { CATEGORY_INFO } from '@/constants/mock-data';
 import { showAlert } from '@/utils/platform';
+import { IMPACT_PER_POST } from '@/utils/rank';
 
 const SAMPLE_PHOTO_PRESETS = [
   {
@@ -65,7 +66,6 @@ export default function CreatePostScreen() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<PostCategory>(PostCategory.TREE_PLANTING);
   const [locationName, setLocationName] = useState('');
-  const [impactScore, setImpactScore] = useState('25');
   const [selectedPhoto, setSelectedPhoto] = useState(SAMPLE_PHOTO_PRESETS[1].url);
   const [isCustomPhoto, setIsCustomPhoto] = useState(false);
   const [photoPicking, setPhotoPicking] = useState(false);
@@ -158,7 +158,6 @@ export default function CreatePostScreen() {
       description: description.trim(),
       category,
       locationName: locationName.trim() || 'Minha Cidade',
-      impactScore: parseInt(impactScore, 10) || 10,
       imageUrl: selectedPhoto,
     });
 
@@ -298,23 +297,21 @@ export default function CreatePostScreen() {
 
           <View style={[styles.formGroup, { flex: 1 }]}>
             <AppText variant="label" weight="semibold" style={styles.label}>
-              Impacto (+pts)
+              Impacto
             </AppText>
-            <TextInput
-              placeholder="Ex: 50"
-              placeholderTextColor={theme.textMuted}
-              value={impactScore}
-              onChangeText={setImpactScore}
-              keyboardType="numeric"
+            {/* Valor fixo por publicação: não é editável */}
+            <View
               style={[
                 styles.input,
-                {
-                  backgroundColor: theme.surface,
-                  borderColor: theme.border,
-                  color: theme.text,
-                },
+                styles.impactFixed,
+                { backgroundColor: '#10B98115', borderColor: '#10B98160' },
               ]}
-            />
+              accessibilityLabel={`Esta ação vale ${IMPACT_PER_POST} pontos de impacto`}
+            >
+              <AppText variant="bodySm" weight="bold" style={{ color: '#10B981' }}>
+                +{IMPACT_PER_POST} pts
+              </AppText>
+            </View>
           </View>
         </View>
 
@@ -500,6 +497,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     fontSize: 15,
+  },
+  impactFixed: {
+    flex: 1,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   textArea: {
     borderWidth: 1,

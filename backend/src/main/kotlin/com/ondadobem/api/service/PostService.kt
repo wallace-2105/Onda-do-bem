@@ -1,5 +1,6 @@
 package com.ondadobem.api.service
 
+import com.ondadobem.api.domain.ImpactRules
 import com.ondadobem.api.domain.entity.CommentEntity
 import com.ondadobem.api.domain.entity.ImpactEntity
 import com.ondadobem.api.domain.entity.LikeEntity
@@ -91,9 +92,8 @@ class PostService(
         val author = userRepository.findById(currentUserId)
             .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado") }
 
-        val calculatedImpactScore = if (request.impactValue != null && request.impactValue > 0) {
-            (request.impactValue * 5).toInt().coerceAtLeast(10)
-        } else 10
+        // Valor fixo por publicação; as métricas (kg, árvores...) continuam opcionais e separadas
+        val calculatedImpactScore = ImpactRules.POINTS_PER_POST
 
         val post = PostEntity(
             author = author,
@@ -153,6 +153,14 @@ class PostService(
         }
 
         postRepository.save(post)
+
+        // Curtida recebida de outro usuário vale pontos para o autor (a própria não conta)
+        val author = post.author
+        if (author.id != user.id) {
+            val delta = if (isLiked) ImpactRules.POINTS_PER_LIKE else -ImpactRules.POINTS_PER_LIKE
+            author.totalImpact = (author.totalImpact + delta).coerceAtLeast(0)
+            userRepository.save(author)
+        }
 
         return LikeResponse(
             isLiked = isLiked,

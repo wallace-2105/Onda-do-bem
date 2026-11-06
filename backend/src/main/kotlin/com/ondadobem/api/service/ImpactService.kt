@@ -3,6 +3,7 @@ package com.ondadobem.api.service
 import com.ondadobem.api.domain.enums.ImpactType
 import com.ondadobem.api.domain.repository.ImpactRepository
 import com.ondadobem.api.domain.repository.PostRepository
+import com.ondadobem.api.domain.repository.UserRepository
 import com.ondadobem.api.dto.ImpactMetricItem
 import com.ondadobem.api.dto.ImpactSummaryResponse
 import org.springframework.stereotype.Service
@@ -12,7 +13,8 @@ import java.util.UUID
 @Service
 class ImpactService(
     private val impactRepository: ImpactRepository,
-    private val postRepository: PostRepository
+    private val postRepository: PostRepository,
+    private val userRepository: UserRepository
 ) {
 
     @Transactional(readOnly = true)
@@ -27,8 +29,8 @@ class ImpactService(
             if (type != null) ImpactMetricItem(type, sum, unit) else null
         }
 
-        // Calcula score global estimado
-        val totalImpactScore = totalActions * 15
+        // Soma dos pontos de todos os usuários (20 por publicação + 2 por curtida recebida)
+        val totalImpactScore = userRepository.sumTotalImpact()
 
         return ImpactSummaryResponse(
             totalActions = totalActions,
@@ -46,8 +48,9 @@ class ImpactService(
             ImpactMetricItem(type, total, unit)
         }
 
-        val totalActions = impacts.size.toLong()
-        val totalImpactScore = totalActions * 15
+        val user = userRepository.findById(userId).orElse(null)
+        val totalActions = user?.totalActions?.toLong() ?: 0L
+        val totalImpactScore = user?.totalImpact?.toLong() ?: 0L
 
         return ImpactSummaryResponse(
             totalActions = totalActions,

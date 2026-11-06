@@ -3,7 +3,7 @@
  *
  * Exibe o perfil do usuário logado com métricas em tempo real de impacto e rank,
  * barra de progresso para a próxima patente, histórico de publicações
- * e leaderboard comunitário onde cada curtida recebida vale +2 de impacto.
+ * e leaderboard comunitário (+20 por ação publicada, +2 por curtida recebida).
  */
 
 import React, { useState, useMemo } from 'react';
@@ -29,7 +29,13 @@ import { AppText } from '@/components/ui/text';
 import { AppButton } from '@/components/ui/button';
 import { PostCard } from '@/components/feed/post-card';
 import { Spacing, BorderRadius, Shadows, FontWeight } from '@/constants/theme';
-import { calculateUserRank, getCommunityLeaderboard, RANK_TIERS } from '@/utils/rank';
+import {
+  calculateUserRank,
+  getCommunityLeaderboard,
+  IMPACT_PER_LIKE,
+  IMPACT_PER_POST,
+  RANK_TIERS,
+} from '@/utils/rank';
 
 export default function ProfileScreen() {
   const theme = useAppTheme();
@@ -95,6 +101,10 @@ export default function ProfileScreen() {
     const entry = leaderboard.find((l) => l.isCurrentUser);
     return entry ? entry.position : 1;
   }, [leaderboard]);
+
+  // O servidor conta todas as publicações; o feed local pode ter só as mais recentes
+  const totalActions = Math.max(currentUser.totalActions || 0, myPosts.length);
+  const postsToNext = Math.ceil(userRank.pointsToNext / IMPACT_PER_POST);
 
   const BADGES = [
     {
@@ -216,82 +226,31 @@ export default function ProfileScreen() {
               <Ionicons name="camera" size={14} color="#FFFFFF" />
             </View>
           </Pressable>
-          <AppText variant="h2" weight="bold" style={styles.displayName}>
+          <AppText variant="h2" weight="bold" center style={styles.displayName}>
             {currentUser.displayName}
           </AppText>
-          <AppText variant="bodySm" color="secondary">
-            @{currentUser.username} • {currentUser.location}
+          <AppText variant="bodySm" color="secondary" center>
+            @{currentUser.username}
           </AppText>
-          <AppText variant="bodySm" color="secondary" center style={styles.bio}>
-            {currentUser.bio}
-          </AppText>
-
-          {/* Banner de Rank & Progresso */}
-          <View
-            style={[
-              styles.rankBanner,
-              {
-                backgroundColor: userRank.color + '12',
-                borderColor: userRank.color + '38',
-              },
-            ]}
-          >
-            <View style={styles.rankBannerHeader}>
-              <View style={styles.rankBadgeRow}>
-                <AppText variant="h3">{userRank.badge}</AppText>
-                <View style={{ marginLeft: 8 }}>
-                  <AppText variant="body" weight="bold" style={{ color: userRank.color }}>
-                    Rank {userRank.rank} • {userRank.title}
-                  </AppText>
-                  <AppText variant="caption" color="secondary">
-                    {userRank.description}
-                  </AppText>
-                </View>
-              </View>
-              <View style={[styles.positionBadge, { backgroundColor: userRank.color }]}>
-                <AppText variant="caption" weight="bold" style={{ color: '#FFFFFF' }}>
-                  #{myPosition} Geral
-                </AppText>
-              </View>
-            </View>
-
-            {/* Barra de Progresso para o próximo rank */}
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBarBackground}>
-                <View
-                  style={[
-                    styles.progressBarFill,
-                    {
-                      width: `${userRank.progressPercent}%`,
-                      backgroundColor: userRank.color,
-                    },
-                  ]}
-                />
-              </View>
-              <View style={styles.progressTextRow}>
-                <AppText variant="caption" weight="semibold" style={{ color: userRank.color }}>
-                  {userRank.currentImpact} pts acumulados
-                </AppText>
-                <AppText variant="caption" color="muted">
-                  {userRank.progressPercent}% para o próximo rank
-                </AppText>
-              </View>
-            </View>
-
-            {/* Hint explicativo das curtidas */}
-            <View style={[styles.likeInfoBox, { backgroundColor: theme.surface }]}>
-              <Ionicons name="heart" size={14} color="#EF4444" style={{ marginRight: 6 }} />
-              <AppText variant="caption" color="secondary" style={{ flex: 1 }}>
-                Faltam <AppText variant="caption" weight="bold" style={{ color: theme.primary }}>{userRank.pointsToNext} pts</AppText> ({userRank.likesToNext} curtidas) para o Rank {userRank.rank + 1} ({userRank.nextTier?.title || 'Próximo Rank'}).
+          {!!currentUser.location?.trim() && (
+            <View style={styles.locationRow}>
+              <Ionicons name="location-outline" size={14} color={theme.textMuted} />
+              <AppText variant="caption" color="muted" style={{ marginLeft: 4 }}>
+                {currentUser.location}
               </AppText>
             </View>
-          </View>
+          )}
+          {!!currentUser.bio?.trim() && (
+            <AppText variant="bodySm" color="secondary" center style={styles.bio}>
+              {currentUser.bio}
+            </AppText>
+          )}
 
-          {/* Stats Row */}
-          <View style={[styles.statsRow, { borderTopColor: theme.borderLight }]}>
+          {/* Números principais */}
+          <View style={[styles.statsRow, { borderColor: theme.borderLight }]}>
             <View style={styles.statItem}>
               <AppText variant="h3" weight="bold" style={{ color: theme.primary }}>
-                {currentUser.totalActions + (myPosts.length > 0 ? myPosts.length : 0)}
+                {totalActions}
               </AppText>
               <AppText variant="caption" color="muted">
                 Ações
@@ -300,19 +259,10 @@ export default function ProfileScreen() {
             <View style={[styles.statDivider, { backgroundColor: theme.borderLight }]} />
             <View style={styles.statItem}>
               <AppText variant="h3" weight="bold" style={{ color: theme.secondary }}>
-                {currentUser.totalImpact}
+                {userRank.currentImpact}
               </AppText>
               <AppText variant="caption" color="muted">
-                Impacto (pts)
-              </AppText>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: theme.borderLight }]} />
-            <View style={styles.statItem}>
-              <AppText variant="h3" weight="bold" style={{ color: userRank.color }}>
-                {userRank.badge} R{userRank.rank}
-              </AppText>
-              <AppText variant="caption" color="muted">
-                Patente
+                Pontos
               </AppText>
             </View>
             <View style={[styles.statDivider, { backgroundColor: theme.borderLight }]} />
@@ -321,8 +271,81 @@ export default function ProfileScreen() {
                 #{myPosition}
               </AppText>
               <AppText variant="caption" color="muted">
-                Ranking
+                No ranking
               </AppText>
+            </View>
+          </View>
+        </View>
+
+        {/* Patente e progresso */}
+        <View
+          style={[
+            styles.rankBanner,
+            { backgroundColor: theme.surface, borderColor: userRank.color + '55' },
+          ]}
+        >
+          <View style={styles.rankBannerHeader}>
+            <View style={[styles.rankEmojiCircle, { backgroundColor: userRank.color + '22' }]}>
+              <AppText style={styles.rankEmoji}>{userRank.badge}</AppText>
+            </View>
+            <View style={styles.rankTitleColumn}>
+              <AppText variant="caption" weight="bold" style={{ color: userRank.color, letterSpacing: 0.5 }}>
+                RANK {userRank.rank}
+              </AppText>
+              <AppText variant="body" weight="bold" numberOfLines={1}>
+                {userRank.title}
+              </AppText>
+              <AppText variant="caption" color="secondary" numberOfLines={2}>
+                {userRank.description}
+              </AppText>
+            </View>
+          </View>
+
+          {/* Barra de progresso para o próximo rank */}
+          <View style={styles.progressContainer}>
+            <View style={styles.progressTextRow}>
+              <AppText variant="caption" weight="semibold" style={{ color: userRank.color }}>
+                {userRank.currentImpact} pts
+              </AppText>
+              <AppText variant="caption" color="muted">
+                {userRank.nextRankImpact} pts
+              </AppText>
+            </View>
+            <View style={[styles.progressBarBackground, { backgroundColor: theme.surfaceElevated }]}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  { width: `${userRank.progressPercent}%`, backgroundColor: userRank.color },
+                ]}
+              />
+            </View>
+          </View>
+
+          {/* Como chegar ao próximo rank */}
+          <View style={[styles.nextRankBox, { backgroundColor: theme.surfaceElevated }]}>
+            <AppText variant="caption" color="secondary">
+              Faltam{' '}
+              <AppText variant="caption" weight="bold" style={{ color: theme.text }}>
+                {userRank.pointsToNext} pts
+              </AppText>{' '}
+              para {userRank.nextTier ? userRank.nextTier.title : `o Rank ${userRank.rank + 1}`}
+            </AppText>
+            <View style={styles.nextRankWays}>
+              <View style={styles.nextRankWay}>
+                <Ionicons name="add-circle" size={16} color={theme.primary} />
+                <AppText variant="caption" color="secondary" style={{ marginLeft: 4 }}>
+                  {postsToNext} {postsToNext === 1 ? 'ação' : 'ações'} (+{IMPACT_PER_POST} cada)
+                </AppText>
+              </View>
+              <AppText variant="caption" color="muted">
+                ou
+              </AppText>
+              <View style={styles.nextRankWay}>
+                <Ionicons name="heart" size={15} color="#EF4444" />
+                <AppText variant="caption" color="secondary" style={{ marginLeft: 4 }}>
+                  {userRank.likesToNext} curtidas (+{IMPACT_PER_LIKE})
+                </AppText>
+              </View>
             </View>
           </View>
         </View>
@@ -412,7 +435,8 @@ export default function ProfileScreen() {
             <View style={styles.leaderboardNotice}>
               <Ionicons name="sparkles" size={16} color={theme.primary} />
               <AppText variant="caption" color="secondary" style={{ marginLeft: 6, flex: 1 }}>
-                Cada curtida recebida concede <AppText variant="caption" weight="bold">+2 de impacto</AppText> e eleva a posição de quem postou no ranking geral.
+                Cada ação publicada vale <AppText variant="caption" weight="bold">+{IMPACT_PER_POST} pts</AppText> e
+                cada curtida recebida vale <AppText variant="caption" weight="bold">+{IMPACT_PER_LIKE} pts</AppText> para quem postou.
               </AppText>
             </View>
 
@@ -660,7 +684,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   displayName: {
-    marginTop: Spacing.xs,
+    marginTop: Spacing.sm,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
   },
   bio: {
     marginTop: Spacing.sm,
@@ -668,52 +697,64 @@ const styles = StyleSheet.create({
     maxWidth: 320,
   },
   rankBanner: {
-    width: '100%',
-    borderRadius: BorderRadius.lg,
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+    borderRadius: BorderRadius.xl,
     borderWidth: 1,
     padding: Spacing.md,
-    marginTop: Spacing.md,
   },
   rankBannerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
-  rankBadgeRow: {
-    flexDirection: 'row',
+  rankEmojiCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
-    flex: 1,
+    justifyContent: 'center',
   },
-  positionBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
+  rankEmoji: {
+    fontSize: 26,
+    lineHeight: 32,
+  },
+  rankTitleColumn: {
+    flex: 1,
+    marginLeft: Spacing.sm,
   },
   progressContainer: {
     marginTop: Spacing.md,
   },
   progressBarBackground: {
-    height: 8,
-    backgroundColor: 'rgba(0,0,0,0.08)',
-    borderRadius: 4,
+    height: 10,
+    borderRadius: 5,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 5,
   },
   progressTextRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 4,
+    marginBottom: 6,
   },
-  likeInfoBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: Spacing.sm,
+  nextRankBox: {
+    marginTop: Spacing.md,
     padding: Spacing.sm,
     borderRadius: BorderRadius.md,
+    gap: 6,
+  },
+  nextRankWays: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  nextRankWay: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   statsRow: {
     flexDirection: 'row',
@@ -727,6 +768,7 @@ const styles = StyleSheet.create({
   statItem: {
     alignItems: 'center',
     flex: 1,
+    gap: 2,
   },
   statDivider: {
     width: 1,

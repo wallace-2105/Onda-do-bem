@@ -479,7 +479,6 @@ export default function MapScreen() {
         category: formCategory,
         locationName: formLocationName.trim() || 'Ponto no Mapa',
         imageUrl: formPhoto,
-        impactScore: 25,
         latitude: pinCoords.latitude,
         longitude: pinCoords.longitude,
         startTime: formStartTime.trim() || '09:00',

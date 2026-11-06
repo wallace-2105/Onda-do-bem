@@ -1,11 +1,17 @@
 /**
  * Onda do Bem — Sistema de Ranks e Impacto
  *
- * Cada curtida recebida em uma publicação concede +2 pontos de impacto
- * ao usuário autor, permitindo subir de rank e avançar no leaderboard comunitário.
+ * Regra de pontos (a mesma do backend, em ImpactRules.kt):
+ * - cada publicação vale IMPACT_PER_POST pontos para o autor
+ * - cada curtida recebida de outro usuário vale IMPACT_PER_LIKE pontos
  */
 
 import { type User, type Post } from '@/types/entities';
+
+/** Pontos fixos por publicação */
+export const IMPACT_PER_POST = 20;
+/** Pontos por curtida recebida (curtir o próprio post não conta) */
+export const IMPACT_PER_LIKE = 2;
 
 export interface RankTier {
   rank: number;
@@ -128,7 +134,6 @@ export interface UserRankInfo {
 
 /**
  * Calcula os detalhes completos de rank para um determinado total de impacto.
- * Cada curtida vale 2 pontos de impacto.
  */
 export function calculateUserRank(totalImpact: number = 0): UserRankInfo {
   const safeImpact = Math.max(0, totalImpact);
@@ -165,7 +170,7 @@ export function calculateUserRank(totalImpact: number = 0): UserRankInfo {
     nextRankImpact = safeImpact + pointsToNext;
   }
 
-  const likesToNext = Math.ceil(pointsToNext / 2);
+  const likesToNext = Math.ceil(pointsToNext / IMPACT_PER_LIKE);
 
   // Ranks além do 10 para quem ultrapassar 1400
   let dynamicRank = currentTier.rank;
